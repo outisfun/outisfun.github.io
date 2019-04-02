@@ -739,7 +739,14 @@ module.exports = function() {
         XHR.setRequestHeader('Content-Type', 'application/json');
         XHR.setRequestHeader('Accept', 'application/json');
         XHR.setRequestHeader('Access-Control-Allow-Origin', '*');
+
         console.log(JSON.stringify(adidasData));
+
+        XHR.onreadystatechange = function() {
+            if (XHR.readyState == XMLHttpRequest.DONE) {
+                alert(XHR.responseText);
+            }
+        };
         XHR.send(JSON.stringify(adidasData));
     }
 
