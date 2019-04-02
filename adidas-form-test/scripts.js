@@ -744,7 +744,7 @@ module.exports = function() {
 
         XHR.onreadystatechange = function() {
             if (XHR.readyState == XMLHttpRequest.DONE) {
-                alert(XHR.responseText);
+                console.log(XHR.responseText);
             }
         };
         XHR.send(JSON.stringify(adidasData));
