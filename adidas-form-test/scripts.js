@@ -655,6 +655,8 @@ module.exports = function() {
 
         var form = document.getElementById( "isf-form__adidas" );
 
+        console.log("Endpoint: Adidas");
+
         // test if both cb are checked
         var buttonSubmit = document.querySelector( ".adidas-form__submit" );
         var bchecked = 0; //neither is checked now
@@ -732,7 +734,7 @@ module.exports = function() {
                     break;
             }
         }
-        console.log("Endpoint: Adidas");
+
         XHR.open("POST", "https://srs.adidas.com/scvRESTServices/account/createSubscription", true);
         XHR.setRequestHeader('Content-Type', 'application/json');
         XHR.setRequestHeader('Accept', 'application/json');
