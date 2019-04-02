@@ -735,7 +735,7 @@ module.exports = function() {
             }
         }
 
-        XHR.open("POST", "https://srs.adidas.com/scvRESTServices/account/createSubscription", true);
+        XHR.open("POST", "https://adidas-highsnobiety-subscribe.herokuapp.com/subscribe", true);
         XHR.setRequestHeader('Content-Type', 'application/json');
         XHR.setRequestHeader('Accept', 'application/json');
         XHR.setRequestHeader('Access-Control-Allow-Origin', '*');
