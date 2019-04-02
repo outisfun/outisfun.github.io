@@ -691,6 +691,7 @@ module.exports = function() {
         adidasData.source = "543459816";
         adidasData.clientId = "EA38ACE74184F2D73082761775D1C962";
         adidasData.countryOfSite = "US";
+        adidasData.newsletterTypeId = 40000; 
 
         // Display the key/value pairs
         for(var pair of formdata.entries()) {
