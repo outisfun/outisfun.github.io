@@ -1,4 +1,57 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+module.exports = function (element, options) {
+  options = options || {}
+  element.normalize()
+  var splitRegex = options.splitRegex
+
+  var tagName = options.tagName || 'span'
+  var classPrefix = options.classPrefix != null ? options.classPrefix : 'char'
+  var count = 1
+
+  function inject (element) {
+    var parentNode = element.parentNode
+    var string = element.nodeValue
+    var split = splitRegex ? string.split(splitRegex) : string
+    var length = split.length
+    var i = -1
+    while (++i < length) {
+      var node = document.createElement(tagName)
+      if (classPrefix) {
+        node.className = classPrefix + count
+        count++
+      }
+      node.appendChild(document.createTextNode(split[i]))
+      node.setAttribute('aria-hidden', 'true')
+      parentNode.insertBefore(node, element)
+    }
+    if (string.trim() !== '') {
+      parentNode.setAttribute('aria-label', string)
+    }
+    parentNode.removeChild(element)
+  }
+
+  ;(function traverse (element) {
+    // `element` is itself a text node.
+    if (element.nodeType === 3) {
+      return inject(element)
+    }
+
+    // `element` has a single child text node.
+    var childNodes = Array.prototype.slice.call(element.childNodes) // static array of nodes
+    var length = childNodes.length
+    if (length === 1 && childNodes[0].nodeType === 3) {
+      return inject(childNodes[0])
+    }
+
+    // `element` has more than one child node.
+    var i = -1
+    while (++i < length) {
+      traverse(childNodes[i])
+    }
+  })(element)
+}
+
+},{}],2:[function(require,module,exports){
 /**
  * EvEmitter v1.1.0
  * Lil' event emitter
@@ -112,7 +165,7 @@ return EvEmitter;
 
 }));
 
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 // Copyright (c) 2017 Adobe Systems Incorporated. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -549,7 +602,7 @@ return EvEmitter;
     typeof module != "undefined" && module.exports ? module.exports = eve : typeof define === "function" && define.amd ? define("eve", [], function () { return eve; }) : glob.eve = eve;
 })(typeof window != "undefined" ? window : this);
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 (function (global){
 /*!
  * VERSION: 2.0.2
@@ -8566,7 +8619,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 
 })((typeof(module) !== "undefined" && module.exports && typeof(global) !== "undefined") ? global : this || window, "TweenMax");
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 /*!
  * imagesLoaded v4.1.4
  * JavaScript is all like "You images are done yet or what?"
@@ -8945,7 +8998,7 @@ return ImagesLoaded;
 
 });
 
-},{"ev-emitter":1}],5:[function(require,module,exports){
+},{"ev-emitter":2}],6:[function(require,module,exports){
 /*!
  * ScrollMagic v2.0.6 (2018-10-08)
  * The javascript library for magical scroll interactions.
@@ -11738,7 +11791,7 @@ return ImagesLoaded;
 
 	return ScrollMagic;
 }));
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 /*!
  * ScrollMagic v2.0.6 (2018-10-08)
  * The javascript library for magical scroll interactions.
@@ -12049,7 +12102,7 @@ return ImagesLoaded;
 
 	});
 }));
-},{"gsap":3,"scrollmagic":5}],7:[function(require,module,exports){
+},{"gsap":4,"scrollmagic":6}],8:[function(require,module,exports){
 // Snap.svg 0.5.0
 //
 // Copyright (c) 2013 – 2017 Adobe Systems Incorporated. All rights reserved.
@@ -20680,7 +20733,7 @@ Snap.plugin(function (Snap, Element, Paper, glob) {
 
 return Snap;
 }));
-},{"eve":2}],8:[function(require,module,exports){
+},{"eve":3}],9:[function(require,module,exports){
 exports = module.exports = Victor;
 
 /**
@@ -22006,7 +22059,7 @@ function degrees2radian (deg) {
 	return deg / degrees;
 }
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 
 ( function(window) {
 	'use strict';
@@ -22019,7 +22072,12 @@ function degrees2radian (deg) {
     var Snap = require( 'snapsvg' );
     var Victor = require( 'victor' );
 
+    //effects
+    var TextFx = require('letter-effect.js');
+    console.log(TextFx);
     var xprMap;
+
+    var controller = new ScrollMagic.Controller();
 
 	//custom code here
     function XPR_Map(el){
@@ -22045,26 +22103,13 @@ function degrees2radian (deg) {
 
     XPR_Map.prototype.init = function(){
 
-        console.log(Object.entries(this.mapPoints));
-        // Object.entries(this.mapPoints).forEach( function(pt, ind) {
-        //     pt[1].DOM.navEl.addEventListener( 'click', function(e) {
-        //         console.log("navigate");
-        //     });
-        // });
-        // this.mapPoints.forEach( function(pt, ind) {
-        //     pt.DOM.navEl.addEventListener( 'click', function(e) {
-        //         // navigate to the target point
-        //         var target = pt.targetPoint;
-        //         self.navigate( self.mapPoints[target] );
-        //     });
-        // });
         this.navigate( this.currentPoint ); // navigate to current point
     };
 
     XPR_Map.prototype.navigate = function(targetPoint) {
         // navigating to a point basically means positioning the map so that the point is in the center
         // of the screen, e.g. the xpr map container
-        console.log("navigating to", targetPoint);
+        this.currentPoint.explore( 'off' );
         var self = this;
         var targetCoords = { x: (100 - targetPoint.coordinates.x), y: (100 - targetPoint.coordinates.y) };
         var currentCoords = { x: this.currentPoint.coordinates.x, y: this.currentPoint.coordinates.y };
@@ -22073,18 +22118,18 @@ function degrees2radian (deg) {
         TweenMax.set(this.DOM.el, {transformOrigin: currentCoords.x + '% ' + currentCoords.y + '%' });
 
         // mmm
-        TweenMax.to( self.DOM.el, 1, {
-            z: -500,
+        TweenMax.to( self.DOM.el, 0.5, {
+            z: -800,
             onComplete: function() {
                 TweenMax.to( self.DOM.el, 1, {
                     x: targetCoords.x + '%',
                     y: targetCoords.y + '%',
                     onComplete: function() {
                         TweenMax.set(self.DOM.el, {transformOrigin: targetCoords.x + '% ' + targetCoords.y + '%' });
-                        TweenMax.to( self.DOM.el, 1, {
+                        TweenMax.to( self.DOM.el, 0.5, {
                             z: 0,
                             onComplete: function() {
-                                targetPoint.DOM.el.classList.add( 'is--exploring' );
+                                targetPoint.explore();
                             }
                         });
                     }
@@ -22105,16 +22150,25 @@ function degrees2radian (deg) {
         this.targetPoint = this.DOM.el.dataset.target.toLowerCase();
 
         this.DOM.container = document.querySelector( ".xpr-map" );
-
+        console.log(this.DOM);
+        if( this.DOM.el.querySelector(".xpr-map__loc__el") ){
+            this.textFx = new TextFx( this.DOM.el.querySelector(".xpr-map__loc__el"), controller );
+        }
 
         this.init();
     }
 
+    XPR_MapPoint.prototype.explore = function( st ){
+        // state is 'on' or 'off'
+        if ( st === 'off' ) {
+            this.textFx.animate( 'hide' );
+        } else {
+            this.textFx.animate( 'show' );
+        }
+
+    };
+
     XPR_MapPoint.prototype.init = function(){
-        // spread points
-        // x and y are alias to translate, so in this case
-        // if we use percentages, they are translated relative to their own size
-        // but we need the size of the container
         var xAdj = (this.coordinates.x / 100) * this.DOM.container.getBoundingClientRect().width;
         var yAdj = (this.coordinates.y / 100) * this.DOM.container.getBoundingClientRect().height;
         TweenMax.to( this.DOM.el, 1, {
@@ -22133,4 +22187,142 @@ function degrees2radian (deg) {
 
 })(window);
 
-},{"gsap":3,"imagesLoaded":4,"scrollmagic":5,"scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap":6,"snapsvg":7,"victor":8}]},{},[9]);
+},{"gsap":4,"imagesLoaded":5,"letter-effect.js":11,"scrollmagic":6,"scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap":7,"snapsvg":8,"victor":9}],11:[function(require,module,exports){
+
+/* LETTERS EFFECT */
+
+/*
+    Based on the Codrops article: https://tympanus.net/codrops/2016/10/18/inspiration-for-letter-effects/
+*/
+
+var ScrollMagic = require("scrollmagic");
+var charming = require("charming");
+
+
+function TextFx(el, controller, options) {
+    this.controller = controller;
+    this.DOM = {el: el};
+    console.log(this);
+    //get the heading element and ...
+    this.DOM.heading = Array.from(this.DOM.el.querySelectorAll('h1, h2, h3, h4, h5, h6'))[0];
+    //insert spans
+
+    var current = this.DOM.heading;
+
+    var text = this.DOM.heading.innerHTML;
+    var words = text.split(' ');
+
+    //A simple function to wrap lines in spans
+    current.innerHTML = "<span>" + words[0] + "</span>";
+    var height = current.offsetHeight;
+
+    for( var i=1; i<words.length; i+=1 ){
+
+        var wlen = words[i].length;
+        //remove the previous closing tag for span and add the new string
+        current.innerHTML = current.innerHTML.substring(0, current.innerHTML.length - 7) + " " + words[i] + "</span>";
+        if(current.offsetHeight > height){
+            //the word we just added belongs to a different line
+            current.innerHTML = current.innerHTML.substring(0, current.innerHTML.length - (8 + words[i].length)) + "</span><span>" + words[i] + "</span>";
+            height = current.offsetHeight;
+        }
+    }
+
+    this.DOM.lines = Array.from(this.DOM.heading.querySelectorAll('span'));
+    //extend? provide defaults?
+    this.opts = options;
+    this.fx = 'fx2';
+    this.isAnimated = false;
+    console.log(this);
+    this.init();
+}
+
+TextFx.prototype.init = function() {
+
+    this.DOM.lines.forEach( function(ln, index) {
+        ln.classList.add("l-effect");
+        charming(ln, {
+            classPrefix: 'letter'
+        });
+    });
+
+    var self = this;
+    //this.animate();
+};
+
+TextFx.prototype.animate = function(direction) {
+    // TweenMax.staggerTo(this.DOM.heading.querySelectorAll("span"), 1,
+    //     {x:-20},
+    // 0.1);
+    var fx = this.effects[this.fx];
+    if( direction === 'show' ) {
+        this.DOM.lines.forEach(function(ln, index) {
+            setTimeout(function(){
+                TweenMax.staggerFromTo(ln.querySelectorAll("span"), 3,
+                fx.start, fx.end, 0.015);
+            }, index*200);
+        });
+    } else {
+        this.DOM.lines.forEach(function(ln, index) {
+            setTimeout(function(){
+                TweenMax.staggerFromTo(ln.querySelectorAll("span"), 3,
+                fx.end, fx.start, 0.015);
+            }, index*200);
+        });
+    }
+
+
+};
+
+TextFx.prototype.effects = {
+    'fx1' : {
+        start: {
+            cycle: {
+                x:function(index){
+                  return index * 5;
+                }
+            },
+            opacity: 0
+        },
+        end: {
+            x: 0,
+            opacity: 1,
+            ease: Expo.easeOut
+        }
+    },
+    'fx2' : {
+        start: {
+            cycle: {
+                y: function(index) {
+                    return (80 + index*5 + '%');
+                }
+            },
+            ease: Expo.easeOut,
+            opacity: 0
+        },
+        end: {
+            y: 0 + '%',
+            opacity: 1,
+            ease: Expo.easeOut
+        }
+    },
+    'fx3' : {
+        start: {
+            rotationY: -90,
+            ease: Expo.easeOut,
+            opacity: 0
+        },
+        end: {
+            rotationY: 0,
+            opacity: 1,
+            ease: Expo.easeOut
+        }
+    }
+};
+
+module.exports = TextFx;
+
+
+
+
+},{"charming":1,"scrollmagic":6}]},{},[10]);

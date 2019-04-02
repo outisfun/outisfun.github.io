@@ -37,31 +37,56 @@
 	            <!-- <div class = "surface" style = "background-image: url('../../preview/assets/bowie2.jpg')"></div> -->
 	            <div class = "xpr-map__loc" data-xcrd = "22" data-ycrd = "54" data-ttl = "Narcissus" data-target = "Bluebell">
 
-	                <h1>22 / 54 / Narcissus (to Bluebell)</h1>
-	                <a href = "#" class = "xpr-map__loc__explore">explore</a>
-	                <a href = "#" class = "xpr-map__loc__nav">navigate</a>
+	            	<div class = "xpr-map__loc__center">
+	            		<h1>22 / 54 / Narcissus (to Bluebell)</h1>
+	                	<a href = "#" class = "xpr-map__loc__explore">explore</a>
+	                	<a href = "#" class = "xpr-map__loc__nav">navigate</a>
+	            	</div>
+	            	<div class = "xpr-map__loc__el">
+	            		<h1>You know how this ends.</h1>
+	            	</div>
+	                
 	            </div>
 	            <div class = "xpr-map__loc" data-xcrd = "12" data-ycrd = "14" data-ttl = "Orchid" data-target = "Anemone">
-	                <h1>12 / 14 / Orchid (to Anemone)</h1>
-	                <div style = "height: 200px; width: 200px; background-color: blue;"></div>
-	                <a href = "#" class = "xpr-map__loc__explore">explore</a>
-	                <a href = "#" class = "xpr-map__loc__nav">navigate</a>
+	                
+	            	<div class = "xpr-map__loc__center">
+	            		<h1>12 / 14 / Orchid (to Anemone)</h1>
+	                	<a href = "#" class = "xpr-map__loc__explore">explore</a>
+	                	<a href = "#" class = "xpr-map__loc__nav">navigate</a>
+	            	</div>
+	            	<div class = "xpr-map__loc__el">
+	            		<h1>You know how this ends.</h1>
+	            	</div>
 	            </div>
 	            <div class = "xpr-map__loc" data-xcrd = "50" data-ycrd = "50" data-ttl = "Bluebell" data-target = "Orchid">
-	                <h1>50 / 50 / Bluebell (to Orchid)</h1> 
-	                <a href = "#" class = "xpr-map__loc__explore">explore</a>
-	                <a href = "#" class = "xpr-map__loc__nav">navigate</a>
-
+	                <div class = "xpr-map__loc__center">
+	            		<h1>50 / 50 / Bluebell (to Orchid)</h1>
+	                	<a href = "#" class = "xpr-map__loc__explore">explore</a>
+	                	<a href = "#" class = "xpr-map__loc__nav">navigate</a>
+	            	</div>
+	            	<div class = "xpr-map__loc__el">
+	            		<h1>You know how this ends.</h1>
+	            	</div>
 	            </div>
 	            <div class = "xpr-map__loc" data-xcrd = "80" data-ycrd = "65" data-ttl = "Anemone" data-target = "Petunia">
-	                <h1>80 / 65 / Anemone (to Petunia)</h1>
-	                <a href = "#" class = "xpr-map__loc__explore">explore</a>
-	                <a href = "#" class = "xpr-map__loc__nav">navigate</a>
+	                <div class = "xpr-map__loc__center">
+	            		<h1>80 / 65 / Anemone (to Petunia)</h1>
+	                	<a href = "#" class = "xpr-map__loc__explore">explore</a>
+	                	<a href = "#" class = "xpr-map__loc__nav">navigate</a>
+	            	</div>
+	            	<div class = "xpr-map__loc__el">
+	            		<h1>You know how this ends.</h1>
+	            	</div>
 	            </div>
 	            <div class = "xpr-map__loc" data-xcrd = "30" data-ycrd = "20" data-ttl = "Petunia" data-target = "Narcissus">
-	                <h1>30 / 20 / Petunia (to Narcissus)</h1>
-	                <a href = "#" class = "xpr-map__loc__explore">explore</a>
-	                <a href = "#" class = "xpr-map__loc__nav">navigate</a>
+	                <div class = "xpr-map__loc__center">
+	            		<h1>30 / 20 / Petunia (to Narcissus)</h1>
+	                	<a href = "#" class = "xpr-map__loc__explore">explore</a>
+	                	<a href = "#" class = "xpr-map__loc__nav">navigate</a>
+	            	</div>
+	            	<div class = "xpr-map__loc__el">
+	            		<h1>You know how this ends.</h1>
+	            	</div>
 	            </div>
 	        </div>
 		</div>

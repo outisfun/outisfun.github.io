@@ -1,4 +1,13 @@
 /* DETACH LATER FROM THE REST */
+.xpr__container {
+  position: relative;
+  height: 100vh;
+  width: 100vw;
+  background-color: black;
+  overflow: hidden;
+  perspective: 2000px;
+}
+
 .xpr-map {
   width: 500vw;
   height: 200vh;
@@ -34,12 +43,21 @@
 .xpr-map__loc {
   position: absolute;
   display: block;
-  width: 300px;
-  height: 200px;
-  border: 2px solid white;
-  padding: 15px;
+  width: 100vw;
+  height: 100vh;
+  border: 1px solid rgba(255, 255, 255, 0.3);
   perspective: 200px;
+  top: -50vh;
+  left: -50vw;
   color: white;
+  font-family: "Roboto Mono", sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.xpr-map__loc h1 {
+  font-size: 28px;
+  font-weight: 400;
 }
 .xpr-map__loc a {
   z-index: 2000;
@@ -54,6 +72,31 @@
   top: -50vh;
   left: -50vw;
   clip-path: url(#xpr-map__svg__clip);
+}
+.xpr-map__loc__center {
+  width: 400px;
+  height: 200px;
+}
+.xpr-map__loc__explore {
+  display: none;
+}
+.xpr-map__loc__el {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+.xpr-map__loc__el h1 {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  /* Will override color (regardless of order) */
+  -webkit-text-stroke-width: 2px;
+  -webkit-text-stroke-color: white;
+  font-size: 18vw;
+  line-height: 18vw;
+  margin: 0px;
 }
 .xpr-map__loc .xpr-map__svg {
   height: 100vh;
@@ -87,6 +130,32 @@
 .xpr-map__loc.is--exploring:before {
   -webkit-clip-path: polygon(25% 56%, 75% 55%, 100% 100%, 0% 100%);
   clip-path: polygon(25% 56%, 75% 55%, 100% 100%, 0% 100%);
+}
+
+.l-effect {
+  display: -webkit-flex;
+  display: -ms-flexbox;
+  display: flex;
+  -webkit-flex-direction: row;
+  -ms-flex-direction: row;
+  flex-direction: row;
+  -webkit-align-items: center;
+  -ms-flex-align: center;
+  align-items: center;
+  -webkit-flex-wrap: wrap;
+  -ms-flex-wrap: wrap;
+  flex-wrap: wrap;
+  overflow: hidden;
+}
+
+span[class*="letter"] {
+  display: block;
+  position: relative;
+  -webkit-flex: none;
+  -ms-flex: none;
+  flex: none;
+  white-space: pre;
+  opacity: 0;
 }
 
 /*# sourceMappingURL=style.css.map */
