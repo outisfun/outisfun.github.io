@@ -1,0 +1,88 @@
+/* DETACH LATER FROM THE REST */
+.xpr-map {
+  width: 500vw;
+  height: 200vh;
+  position: absolute;
+  left: calc(-500vw + 50%);
+  top: calc(-200vh + 50%);
+  transform-style: preserve-3d;
+  transform: translateY(50%) translateX(50%);
+}
+.xpr-map .surface-container {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  top: 0;
+  height: 0;
+  width: 100%;
+  height: 100%;
+}
+.xpr-map .surface-container .surface {
+  height: 100%;
+  width: 100%;
+  background-image: url("https://cdn.mapsinternational.co.uk/pub/media/catalog/product/cache/afad95d7734d2fa6d0a8ba78597182b7/b/a/barcelona-city-street-map-print-turquoise_ls01569.jpg");
+  background-repeat: repeat;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 0%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 0%);
+  transition: 1s all;
+}
+.xpr-map .surface-container .surface.is-masked {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 25%, black 75%);
+  mask-image: linear-gradient(to bottom, transparent 25%, black 75%);
+}
+.xpr-map__loc {
+  position: absolute;
+  display: block;
+  width: 300px;
+  height: 200px;
+  border: 1px solid blue;
+  perspective: 200px;
+}
+.xpr-map__loc a {
+  z-index: 2000;
+  position: relative;
+}
+.xpr-map__loc__img {
+  background-size: cover;
+  position: absolute;
+  height: 100vh;
+  width: 100vw;
+  top: -50vh;
+  left: -50vw;
+  clip-path: url(#xpr-map__svg__clip);
+}
+.xpr-map__loc .xpr-map__svg {
+  height: 100vh;
+  width: 100vw;
+  position: absolute;
+  top: -50vh;
+  left: -50vw;
+  pointer-events: none;
+}
+.xpr-map__loc .xpr-map__svg #xpr-map__svg__clip path {
+  visibility: hidden;
+}
+.xpr-map__loc .xpr-map__svg #xpr-map__svg__clip path:first-of-type {
+  visibility: visible;
+}
+.xpr-map__loc:before {
+  /*//simulating surface
+  content: '';
+  position: absolute;
+  width: 100vw;
+  height: 100vh;
+  background-image: url('../../preview/assets/bowie2.jpg');
+  background-size: cover;
+  top: -50vh;
+  left: -50vw;
+  z-index: -1;
+  @include transition-normal;
+  -webkit-clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0% 100%);*/
+}
+.xpr-map__loc.is--exploring:before {
+  -webkit-clip-path: polygon(25% 56%, 75% 55%, 100% 100%, 0% 100%);
+  clip-path: polygon(25% 56%, 75% 55%, 100% 100%, 0% 100%);
+}
+
+/*# sourceMappingURL=style.css.map */

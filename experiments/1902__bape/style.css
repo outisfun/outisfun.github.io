@@ -1,0 +1,77 @@
+.bape-pattern__container {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 20;
+  background: #786F38;
+}
+.bape-pattern__container svg {
+  height: 100%;
+  width: 100%;
+}
+.bape-pattern__container svg .color1 {
+  fill: #efffff;
+    /*opacity: 0.5;
+*/
+}
+.bape-pattern__container svg .color2 {
+  fill: #d1f0f2;
+  /*opacity: 0.5;*/
+}
+.bape-pattern__container svg .color3 {
+  fill: #b3d2d4;
+  /*opacity: 0.5;*/
+}
+.bape-pattern__container svg .color-1 {
+  fill: #000000;
+  display: none;
+}
+.bape-pattern__container svg .color-2 {
+  fill: #786F38;
+}
+.bape-pattern__container svg .color-3 {
+  fill: #002515;
+}
+.bape-pattern__container svg .color-4 {
+  fill: #240000;
+}
+.bape-pattern__container svg .color-5 {
+  fill: #33642B;
+}
+.bape-pattern__container svg .group {
+  fill: red !important;
+}
+
+/* HELPERS */
+body {
+  margin: 0px;
+}
+
+.demo__content {
+  padding: 150px 0px;
+}
+
+.demo__content__wrap {
+  max-width: 800px;
+  margin: 0 auto;
+  background-color: white;
+  padding: 60px 30px;
+  z-index: 200;
+  position: relative;
+  font-family: "Nunito", sans-serif;
+}
+.demo__content__wrap h1 {
+  margin-bottom: 45px;
+  text-align: center;
+}
+.demo__content__wrap h5 {
+  font-size: 21px;
+}
+
+body {
+  background: transparent !important;
+}
+
+/*# sourceMappingURL=style.css.map */
