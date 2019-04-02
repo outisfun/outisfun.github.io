@@ -732,12 +732,10 @@ module.exports = function() {
                     break;
             }
         }
-
-        XHR.open("POST", "https://srs.adidas.com/scvRESTServices/account/createSubscription", true);
+        console.log("Philipp's solution");
+        XHR.open("POST", "https://adidas-highsnobiety-subscribe.herokuapp.com/subscribe", true);
         XHR.setRequestHeader('Content-Type', 'application/json');
         XHR.setRequestHeader('Accept', 'application/json');
-        XHR.setRequestHeader('X-CORRELATION-ID', '543459816');
-        XHR.setRequestHeader('SourceID', '543459816' );
         XHR.setRequestHeader('Access-Control-Allow-Origin', '*');
         console.log(JSON.stringify(adidasData));
         XHR.send(JSON.stringify(adidasData));
