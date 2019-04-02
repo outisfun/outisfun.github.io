@@ -676,7 +676,7 @@ module.exports = function() {
         });
 
         form.addEventListener('submit', function(ev) {
-            ev.preventDefault();
+            //ev.preventDefault();
             var oData = new FormData(form);
             sendData(oData);
         }, false);
