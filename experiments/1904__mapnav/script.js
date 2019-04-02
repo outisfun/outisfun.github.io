@@ -22025,13 +22025,13 @@ function degrees2radian (deg) {
     function XPR_Map(el){
 
         this.DOM = {el: el};
-        this.DOM.mapPoints = Array.from(this.DOM.el.querySelectorAll( ".xpr-map__loc" ));
         this.mapPoints = {}; // an object with all the locations to navigate
         this.currentPoint = '';
 
         var self = this;
 
-        this.DOM.mapPoints.forEach(function( pt, ind ) {
+        // build map points
+        Array.from(this.DOM.el.querySelectorAll( ".xpr-map__loc" )).forEach(function( pt, ind ) {
             var key = pt.dataset.ttl.toLowerCase();
             var point = new XPR_MapPoint( pt );
             self.mapPoints[key] = point;
@@ -22045,19 +22045,26 @@ function degrees2radian (deg) {
 
     XPR_Map.prototype.init = function(){
 
-        this.DOM.mapPoints.forEach( function(pt, ind) {
-            pt.querySelector("a.go-on").addEventListener( 'click', function(e) {
-                // navigate to the target point
-                var target = pt.dataset.target.toLowerCase();
-                self.navigate( self.mapPoints[target] );
-            });
-        });
+        console.log(Object.entries(this.mapPoints));
+        // Object.entries(this.mapPoints).forEach( function(pt, ind) {
+        //     pt[1].DOM.navEl.addEventListener( 'click', function(e) {
+        //         console.log("navigate");
+        //     });
+        // });
+        // this.mapPoints.forEach( function(pt, ind) {
+        //     pt.DOM.navEl.addEventListener( 'click', function(e) {
+        //         // navigate to the target point
+        //         var target = pt.targetPoint;
+        //         self.navigate( self.mapPoints[target] );
+        //     });
+        // });
         this.navigate( this.currentPoint ); // navigate to current point
     };
 
     XPR_Map.prototype.navigate = function(targetPoint) {
         // navigating to a point basically means positioning the map so that the point is in the center
         // of the screen, e.g. the xpr map container
+        console.log("navigating to", targetPoint);
         var self = this;
         var targetCoords = { x: (100 - targetPoint.coordinates.x), y: (100 - targetPoint.coordinates.y) };
         var currentCoords = { x: this.currentPoint.coordinates.x, y: this.currentPoint.coordinates.y };
@@ -22091,10 +22098,11 @@ function degrees2radian (deg) {
     function XPR_MapPoint(el){
 
         this.DOM = {el: el};
-        this.DOM.navEl = document.querySelector( ".xpr-map__loc__nav" );
-        this.DOM.exploreEl = document.querySelector( ".xpr-map__loc__explore" );
+        this.DOM.navEl = this.DOM.el.querySelector( ".xpr-map__loc__nav" );
+        this.DOM.exploreEl = this.DOM.el.querySelector( ".xpr-map__loc__explore" );
         this.named = this.DOM.el.dataset.ttl;
         this.coordinates = { x: Number( this.DOM.el.dataset.xcrd ), y: Number( this.DOM.el.dataset.ycrd ) };
+        this.targetPoint = this.DOM.el.dataset.target.toLowerCase();
 
         this.DOM.container = document.querySelector( ".xpr-map" );
 
@@ -22112,6 +22120,12 @@ function degrees2radian (deg) {
         TweenMax.to( this.DOM.el, 1, {
             x: xAdj,
             y: yAdj
+        });
+
+        var self = this;
+
+        this.DOM.navEl.addEventListener( 'click', function() {
+            xprMap.navigate( xprMap.mapPoints[self.targetPoint] );
         });
     };
 

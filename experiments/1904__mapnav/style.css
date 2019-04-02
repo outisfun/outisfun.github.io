@@ -20,11 +20,12 @@
 .xpr-map .surface-container .surface {
   height: 100%;
   width: 100%;
-  background-image: url("https://cdn.mapsinternational.co.uk/pub/media/catalog/product/cache/afad95d7734d2fa6d0a8ba78597182b7/b/a/barcelona-city-street-map-print-turquoise_ls01569.jpg");
+  /*background-image: url('https://cdn.mapsinternational.co.uk/pub/media/catalog/product/cache/afad95d7734d2fa6d0a8ba78597182b7/b/a/barcelona-city-street-map-print-turquoise_ls01569.jpg');
   background-repeat: repeat;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 0%);
-  mask-image: linear-gradient(to bottom, transparent 0%, black 0%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 0%);*/
   transition: 1s all;
+  background-color: black;
 }
 .xpr-map .surface-container .surface.is-masked {
   -webkit-mask-image: linear-gradient(to bottom, transparent 25%, black 75%);
@@ -35,12 +36,15 @@
   display: block;
   width: 300px;
   height: 200px;
-  border: 1px solid blue;
+  border: 2px solid white;
+  padding: 15px;
   perspective: 200px;
+  color: white;
 }
 .xpr-map__loc a {
   z-index: 2000;
   position: relative;
+  color: white;
 }
 .xpr-map__loc__img {
   background-size: cover;
