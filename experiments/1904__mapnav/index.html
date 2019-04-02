@@ -10,31 +10,6 @@
 	<body class = "xpr">
 		<div class = "xpr__container">
 			<div class = "xpr-map">
-	            <div class = "surface-container">
-	                <svg version="1.1" class = "surface" id="theSVG" viewBox="0 0 800 800" width="7000" height="2500" xml:space="preserve">
-	                    <defs>
-	                    <mask id="masker">
-	                        <rect class="gradientBox" fill="url(#theGradient)" x="0" y="0" width="7000" height="2500"/>
-	                    </mask>
-
-	                    <pattern id="guy" patternUnits="userSpaceOnUse" width="7000" height="2500">
-	                        <image xlink:href="https://s3-us-west-2.amazonaws.com/s.cdpn.io/314556/scienceGuy.jpg" x="0" y="0" width="800" height="800" />
-	                    </pattern>
-
-	                    <lineargradient id="theGradient" gradientUnits="userSpaceOnUse" x1="0" y1="400" x2="7000" y2="2500">
-	                        <stop  offset="0" style="stop-color:#000000"/>
-	                        <stop  offset="1" style="stop-color:#ffffff"/>
-	                    </lineargradient>
-
-	                    </defs>
-	                      
-	                    <g mask="url(#masker)">
-	                    <rect id="theImage" width="7000" height="2500" x="0" y="0" fill="url(#guy)" />
-	                    </g>
-
-	                </svg>
-	            </div>
-	            <!-- <div class = "surface" style = "background-image: url('../../preview/assets/bowie2.jpg')"></div> -->
 	            <div class = "xpr-map__loc" data-xcrd = "22" data-ycrd = "54" data-ttl = "Narcissus" data-target = "Bluebell">
 
 	            	<div class = "xpr-map__loc__center">
@@ -45,7 +20,14 @@
 	            	<div class = "xpr-map__loc__el">
 	            		<h1>You know how this ends.</h1>
 	            	</div>
-	                
+	            	<div class = "xpr-point__img" style = "background-image: url('http://pavbca.com/walldb/original/d/f/2/245029.jpg'); background-position: center center; clip-path: url(#xpr-point__svg__clip-1);">
+	            	</div>
+	                <svg class = "xpr-point__svg" >
+	                    <defs class = "xpr-point__svg__defs">
+	                        <clipPath id = "xpr-point__svg__clip-1" class = "xpr-point__svg__clip">
+	                        </clipPath>
+	                    </defs>
+	                </svg>
 	            </div>
 	            <div class = "xpr-map__loc" data-xcrd = "12" data-ycrd = "14" data-ttl = "Orchid" data-target = "Anemone">
 	                

@@ -1,4 +1,7 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+!function(t,n){"object"==typeof exports&&"undefined"!=typeof module?module.exports=n():"function"==typeof define&&define.amd?define(n):(t=t||self).blobs=n()}(this,function(){"use strict";var p=function(n){return function(t){return n[(t%n.length+n.length)%n.length]}},M=function(t){return t/360*2*Math.PI},y=function(t,n){return Math.sqrt(Math.pow(t.x-n.x,2)+Math.pow(t.y-n.y,2))},d=function(t,n){return Math.atan2(n.y-t.y,n.x-t.x)/Math.PI*1/2*360},w=function(t,o){for(var n=t.map(function(t){return e=o,(r=(n=t).handles||{angle:0,out:0,in:0}).angle=Math.PI+M(r.angle),{x:n.x,y:e.height-n.y,handles:r};var n,e,r}),e=[],r=0;r<n.length;r++){var i=p(n)(r),s=i.x,a=i.y,h=i.handles,l=p(n)(r+1),c=l.handles;void 0!==h?e.push({x1:s-Math.cos(h.angle)*h.out,y1:a+Math.sin(h.angle)*h.out,x2:l.x+Math.cos(c.angle)*c.in,y2:l.y-Math.sin(c.angle)*c.in}):e.push({x1:s,y1:a,x2:l.x,y2:l.y})}var u="";for(r=0;r<=n.length;r++){var f=p(n)(r);h=p(e)(r-1);0!==r?u+="C"+h.x1+","+h.y1+","+h.x2+","+h.y2+","+f.x+","+f.y:u+="M"+f.x+","+f.y}var g="";if(o.guides){var x=o.stroke||"black",y=o.strokeWidth||1;o.boundingBox&&(g+='\n                <rect x="0" y="0" width="'+o.width+'" height="'+o.height+'" fill="none"\n                    stroke="'+x+'" stroke-width="'+2*y+'" stroke-dasharray="'+2*y+'" />');for(r=0;r<n.length;r++){var d=p(n)(r),w=(s=d.x,a=d.y,h=p(e)(r),p(n)(r+1));g+='\n                <line x1="'+s+'" y1="'+a+'" x2="'+h.x1+'" y2="'+h.y1+'"\n                    stroke-width="'+y+'" stroke="'+x+'" />\n                <line x1="'+w.x+'" y1="'+w.y+'" x2="'+h.x2+'" y2="'+h.y2+'"\n                    stroke-width="'+y+'" stroke="'+x+'" stroke-dasharray="'+2*y+'" />\n                <circle cx="'+h.x1+'" cy="'+h.y1+'" r="'+y+'"\n                    fill="'+x+'" />\n                <circle cx="'+h.x2+'" cy="'+h.y2+'" r="'+y+'"\n                    fill="'+x+'" />\n                <circle cx="'+s+'" cy="'+a+'" r="'+2*y+'" fill="'+x+'" />'}}var k=o.stroke||(o.guides?"black":"none"),v=o.strokeWidth||(o.guides?1:0);return('\n        <svg\n            width="'+o.width+'"\n            height="'+o.height+'"\n            viewBox="0 0 '+o.width+" "+o.height+'"\n            xmlns="http://www.w3.org/2000/svg"\n        >\n            <g transform="'+(o.transform||"")+'">\n                <path\n                    stroke="'+k+'"\n                    stroke-width="'+v+'"\n                    fill="'+(o.fill||"none")+'"\n                    d="'+u+'"\n                />\n                '+g+"\n            </g>\n        </svg>\n    ").replace(/\s+/g," ")};return function(t){var n,e,r,o,i,s,a=(n=t.seed||String(Date.now()),s=function(t){for(var n=2166136261,e=0;e<t.length;e++)n=Math.imul(n^t.charCodeAt(e),16777619);return function(){return n+=n<<13,n^=n>>>7,n+=n<<3,n^=n>>>17,(n+=n<<5)>>>0}}(n),e=s(),r=s(),o=s(),i=s(),function(){var t=(e>>>=0)+(r>>>=0)|0;return e=r^r>>>9,r=(o>>>=0)+(o<<3)|0,o=(o=o<<21|o>>>11)+(t=t+(i=1+(i>>>=0)|0)|0)|0,(t>>>0)/4294967296});if(!t.stroke&&!t.color)throw new Error("no color or stroke specified");if(t.complexity<=0||1<t.complexity)throw new Error("complexity out of range ]0,1]");if(t.contrast<0||1<t.contrast)throw new Error("contrast out of range [0,1]");for(var h=3+Math.floor(14*t.complexity),l=360/h,c=t.size/Math.E,u=[],f=0;f<h;f++){var g=1-.8*t.contrast*a();u.push({x:Math.sin(M(f*l))*c*g+t.size/2,y:Math.cos(M(f*l))*c*g+t.size/2})}var x=function(t,n){if(2===t.length)return t;for(var e=[],r=0;r<t.length;r++){var o=p(t)(r),i=p(t)(r-1),s=p(t)(r+1);e.push({x:o.x,y:o.y,handles:{angle:d(i,s),in:.5*n.strength*y(o,i),out:.5*n.strength*y(o,s)}})}return e}(u,{closed:!0,strength:4/3*Math.tan(M(l/4))/Math.sin(M(l/2))});return w(x,{closed:!0,width:t.size,height:t.size,fill:t.color,transform:"rotate("+a()*l+","+t.size/2+","+t.size/2+")",stroke:t.stroke&&t.stroke.color,strokeWidth:t.stroke&&t.stroke.width,guides:t.guides})}});
+
+},{}],2:[function(require,module,exports){
 module.exports = function (element, options) {
   options = options || {}
   element.normalize()
@@ -51,7 +54,7 @@ module.exports = function (element, options) {
   })(element)
 }
 
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 /**
  * EvEmitter v1.1.0
  * Lil' event emitter
@@ -165,7 +168,7 @@ return EvEmitter;
 
 }));
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 // Copyright (c) 2017 Adobe Systems Incorporated. All rights reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -602,7 +605,7 @@ return EvEmitter;
     typeof module != "undefined" && module.exports ? module.exports = eve : typeof define === "function" && define.amd ? define("eve", [], function () { return eve; }) : glob.eve = eve;
 })(typeof window != "undefined" ? window : this);
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 (function (global){
 /*!
  * VERSION: 2.0.2
@@ -8619,7 +8622,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 
 })((typeof(module) !== "undefined" && module.exports && typeof(global) !== "undefined") ? global : this || window, "TweenMax");
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 /*!
  * imagesLoaded v4.1.4
  * JavaScript is all like "You images are done yet or what?"
@@ -8998,7 +9001,7 @@ return ImagesLoaded;
 
 });
 
-},{"ev-emitter":2}],6:[function(require,module,exports){
+},{"ev-emitter":3}],7:[function(require,module,exports){
 /*!
  * ScrollMagic v2.0.6 (2018-10-08)
  * The javascript library for magical scroll interactions.
@@ -11791,7 +11794,7 @@ return ImagesLoaded;
 
 	return ScrollMagic;
 }));
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 /*!
  * ScrollMagic v2.0.6 (2018-10-08)
  * The javascript library for magical scroll interactions.
@@ -12102,7 +12105,7 @@ return ImagesLoaded;
 
 	});
 }));
-},{"gsap":4,"scrollmagic":6}],8:[function(require,module,exports){
+},{"gsap":5,"scrollmagic":7}],9:[function(require,module,exports){
 // Snap.svg 0.5.0
 //
 // Copyright (c) 2013 – 2017 Adobe Systems Incorporated. All rights reserved.
@@ -20733,7 +20736,7 @@ Snap.plugin(function (Snap, Element, Paper, glob) {
 
 return Snap;
 }));
-},{"eve":3}],9:[function(require,module,exports){
+},{"eve":4}],10:[function(require,module,exports){
 exports = module.exports = Victor;
 
 /**
@@ -22059,7 +22062,197 @@ function degrees2radian (deg) {
 	return deg / degrees;
 }
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
+var TextFx = require('letter-effect.js');
+var blobs = require("blobs");
+
+//custom code here
+function XPR_Blob(el, size){
+
+    this.DOM = {el: el};
+
+    // make them actually
+    this.defs =  this.DOM.el.querySelector(".xpr-point__svg__defs");
+    this.defsClip = this.DOM.el.querySelector(".xpr-point__svg__clip");
+
+    // build a blob
+    var blob = blobs({
+        size: size,
+        complexity: 0.4,
+        contrast: 0.3,
+        color: "none",
+        stroke: {
+          width: 1,
+          color: "#ff0000",
+        },
+        seed: 12
+    });
+    var blobSVG = createElementFromHTML(blob);
+    var blobG = createElementFromHTML(blobSVG.innerHTML);
+    var blobEl = createElementFromHTML(blobG.innerHTML);
+
+    //append to defs to use in morphing
+    this.defsClip.innerHTML += blobG.innerHTML;
+    var paths = Array.from( this.defsClip.querySelectorAll("path") );
+    this.path = paths[paths.length - 1];
+    //this.init();
+}
+
+function createElementFromHTML(htmlString) {
+   var div = document.createElement('div');
+   div.innerHTML = htmlString.trim();
+
+   // Change this to div.childNodes to support multiple top-level nodes ?
+   return div.firstChild;
+}
+
+module.exports = XPR_Blob;
+
+},{"blobs":1,"letter-effect.js":14}],12:[function(require,module,exports){
+var TextFx = require('letter-effect.js');
+var blob = require('blobs');
+var XPR_Blob = require('../1904__mapnav/blob.js');
+var Snap = require("snapsvg");
+
+//custom code here
+function XPR_Map(el){
+
+    this.DOM = {el: el};
+    this.mapPoints = {}; // an object with all the locations to navigate
+    this.currentPoint = '';
+
+    var self = this;
+
+    // build map points
+    Array.from(this.DOM.el.querySelectorAll( ".xpr-map__loc" )).forEach(function( pt, ind ) {
+        var key = pt.dataset.ttl.toLowerCase();
+        var point = new XPR_MapPoint( pt, self );
+        self.mapPoints[key] = point;
+        if( ind === 0 ) {
+            self.currentPoint = point; //track current point
+        }
+    });
+
+    this.init();
+}
+
+XPR_Map.prototype.init = function(){
+
+    this.navigate( this.currentPoint ); // navigate to current point
+};
+
+XPR_Map.prototype.navigate = function(targetPoint) {
+    // navigating to a point basically means positioning the map so that the point is in the center
+    // of the screen, e.g. the xpr map container
+    this.currentPoint.exit();
+    var self = this;
+    var targetCoords = { x: (100 - targetPoint.coordinates.x), y: (100 - targetPoint.coordinates.y) };
+    var currentCoords = { x: this.currentPoint.coordinates.x, y: this.currentPoint.coordinates.y };
+
+    //set origin center to current point
+    TweenMax.set(this.DOM.el, {transformOrigin: currentCoords.x + '% ' + currentCoords.y + '%' });
+
+    // mmm
+    TweenMax.to( self.DOM.el, 0.5, {
+        z: -800,
+        onComplete: function() {
+            TweenMax.to( self.DOM.el, 1, {
+                x: targetCoords.x + '%',
+                y: targetCoords.y + '%',
+                onComplete: function() {
+                    TweenMax.set(self.DOM.el, {transformOrigin: targetCoords.x + '% ' + targetCoords.y + '%' });
+                    TweenMax.to( self.DOM.el, 0.5, {
+                        z: 0,
+                        onComplete: function() {
+                            targetPoint.enter();
+                        }
+                    });
+                }
+            });
+        }
+    });
+
+    this.currentPoint = targetPoint;
+};
+
+function XPR_MapPoint(el, map){
+
+    this.DOM = {el: el};
+    this.DOM.navEl = this.DOM.el.querySelector( ".xpr-map__loc__nav" );
+    this.DOM.exploreEl = this.DOM.el.querySelector( ".xpr-map__loc__explore" );
+    this.named = this.DOM.el.dataset.ttl;
+    this.coordinates = { x: Number( this.DOM.el.dataset.xcrd ), y: Number( this.DOM.el.dataset.ycrd ) };
+    this.targetPoint = this.DOM.el.dataset.target.toLowerCase();
+
+    this.map = map;
+    this.DOM.container = document.querySelector( ".xpr-map" );
+    console.log(this.DOM);
+    if( this.DOM.el.querySelector(".xpr-map__loc__el") ){
+        this.textFx = new TextFx( this.DOM.el.querySelector(".xpr-map__loc__el"));
+    }
+    if(this.DOM.el.querySelector( ".xpr-point__svg__defs" )){
+        var maxSize = (window.innerHeight > window.innerWidth) ? window.innerWidth : window.innerHeight;
+
+        this.blobs = {};
+        this.blobs.large = new XPR_Blob(this.DOM.el, (maxSize-200));
+        this.blobs.small = new XPR_Blob(this.DOM.el, maxSize);
+
+        var self = this;
+        setTimeout(function(){
+            var mb = Snap.select('path');
+
+            var startPoints = self.blobs.large.path.getAttribute('d');
+            var finPoints = self.blobs.small.path.getAttribute('d');
+
+            var finBlob = function(){
+             // mb.animate({ d: finPoints }, 1000, mina.easeout, function() {
+
+             //  });
+            };
+            // var startBlob = function(){
+            //   morphBlob.animate({ d: finPoints }, 1000, mina.backout, finBlob);
+            // }
+            finBlob();
+        }, 3000);
+    }
+
+
+
+
+    console.log(this);
+    this.init();
+}
+
+XPR_MapPoint.prototype.enter = function(){
+    this.textFx.animate( 'show' );
+};
+
+XPR_MapPoint.prototype.exit = function(){
+    this.textFx.animate( 'hide' );
+};
+
+XPR_MapPoint.prototype.explore = function(){
+
+};
+
+XPR_MapPoint.prototype.init = function(){
+    var xAdj = (this.coordinates.x / 100) * this.map.DOM.el.getBoundingClientRect().width;
+    var yAdj = (this.coordinates.y / 100) * this.map.DOM.el.getBoundingClientRect().height;
+    TweenMax.to( this.DOM.el, 1, {
+        x: xAdj,
+        y: yAdj
+    });
+
+    var self = this;
+
+    this.DOM.navEl.addEventListener( 'click', function() {
+        self.map.navigate( self.map.mapPoints[self.targetPoint] );
+    });
+};
+
+module.exports = XPR_Map;
+
+},{"../1904__mapnav/blob.js":11,"blobs":1,"letter-effect.js":14,"snapsvg":9}],13:[function(require,module,exports){
 
 ( function(window) {
 	'use strict';
@@ -22072,122 +22265,15 @@ function degrees2radian (deg) {
     var Snap = require( 'snapsvg' );
     var Victor = require( 'victor' );
 
-    //effects
-    var TextFx = require('letter-effect.js');
-    console.log(TextFx);
     var xprMap;
 
-    var controller = new ScrollMagic.Controller();
-
-	//custom code here
-    function XPR_Map(el){
-
-        this.DOM = {el: el};
-        this.mapPoints = {}; // an object with all the locations to navigate
-        this.currentPoint = '';
-
-        var self = this;
-
-        // build map points
-        Array.from(this.DOM.el.querySelectorAll( ".xpr-map__loc" )).forEach(function( pt, ind ) {
-            var key = pt.dataset.ttl.toLowerCase();
-            var point = new XPR_MapPoint( pt );
-            self.mapPoints[key] = point;
-            if( ind === 0 ) {
-                self.currentPoint = point; //track current point
-            }
-        });
-
-        this.init();
-    }
-
-    XPR_Map.prototype.init = function(){
-
-        this.navigate( this.currentPoint ); // navigate to current point
-    };
-
-    XPR_Map.prototype.navigate = function(targetPoint) {
-        // navigating to a point basically means positioning the map so that the point is in the center
-        // of the screen, e.g. the xpr map container
-        this.currentPoint.explore( 'off' );
-        var self = this;
-        var targetCoords = { x: (100 - targetPoint.coordinates.x), y: (100 - targetPoint.coordinates.y) };
-        var currentCoords = { x: this.currentPoint.coordinates.x, y: this.currentPoint.coordinates.y };
-
-        //set origin center to current point
-        TweenMax.set(this.DOM.el, {transformOrigin: currentCoords.x + '% ' + currentCoords.y + '%' });
-
-        // mmm
-        TweenMax.to( self.DOM.el, 0.5, {
-            z: -800,
-            onComplete: function() {
-                TweenMax.to( self.DOM.el, 1, {
-                    x: targetCoords.x + '%',
-                    y: targetCoords.y + '%',
-                    onComplete: function() {
-                        TweenMax.set(self.DOM.el, {transformOrigin: targetCoords.x + '% ' + targetCoords.y + '%' });
-                        TweenMax.to( self.DOM.el, 0.5, {
-                            z: 0,
-                            onComplete: function() {
-                                targetPoint.explore();
-                            }
-                        });
-                    }
-                });
-            }
-        });
-
-        this.currentPoint = targetPoint;
-    };
-
-    function XPR_MapPoint(el){
-
-        this.DOM = {el: el};
-        this.DOM.navEl = this.DOM.el.querySelector( ".xpr-map__loc__nav" );
-        this.DOM.exploreEl = this.DOM.el.querySelector( ".xpr-map__loc__explore" );
-        this.named = this.DOM.el.dataset.ttl;
-        this.coordinates = { x: Number( this.DOM.el.dataset.xcrd ), y: Number( this.DOM.el.dataset.ycrd ) };
-        this.targetPoint = this.DOM.el.dataset.target.toLowerCase();
-
-        this.DOM.container = document.querySelector( ".xpr-map" );
-        console.log(this.DOM);
-        if( this.DOM.el.querySelector(".xpr-map__loc__el") ){
-            this.textFx = new TextFx( this.DOM.el.querySelector(".xpr-map__loc__el"), controller );
-        }
-
-        this.init();
-    }
-
-    XPR_MapPoint.prototype.explore = function( st ){
-        // state is 'on' or 'off'
-        if ( st === 'off' ) {
-            this.textFx.animate( 'hide' );
-        } else {
-            this.textFx.animate( 'show' );
-        }
-
-    };
-
-    XPR_MapPoint.prototype.init = function(){
-        var xAdj = (this.coordinates.x / 100) * this.DOM.container.getBoundingClientRect().width;
-        var yAdj = (this.coordinates.y / 100) * this.DOM.container.getBoundingClientRect().height;
-        TweenMax.to( this.DOM.el, 1, {
-            x: xAdj,
-            y: yAdj
-        });
-
-        var self = this;
-
-        this.DOM.navEl.addEventListener( 'click', function() {
-            xprMap.navigate( xprMap.mapPoints[self.targetPoint] );
-        });
-    };
+    var XPR_Map = require('../1904__mapnav/map.js');
 
     xprMap = new XPR_Map(document.querySelector( ".xpr-map" ));
 
 })(window);
 
-},{"gsap":4,"imagesLoaded":5,"letter-effect.js":11,"scrollmagic":6,"scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap":7,"snapsvg":8,"victor":9}],11:[function(require,module,exports){
+},{"../1904__mapnav/map.js":12,"gsap":5,"imagesLoaded":6,"scrollmagic":7,"scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap":8,"snapsvg":9,"victor":10}],14:[function(require,module,exports){
 
 /* LETTERS EFFECT */
 
@@ -22199,8 +22285,7 @@ var ScrollMagic = require("scrollmagic");
 var charming = require("charming");
 
 
-function TextFx(el, controller, options) {
-    this.controller = controller;
+function TextFx(el, options) {
     this.DOM = {el: el};
     console.log(this);
     //get the heading element and ...
@@ -22263,6 +22348,7 @@ TextFx.prototype.animate = function(direction) {
             }, index*200);
         });
     } else {
+        console.log("hide");
         this.DOM.lines.forEach(function(ln, index) {
             setTimeout(function(){
                 TweenMax.staggerFromTo(ln.querySelectorAll("span"), 3,
@@ -22325,4 +22411,4 @@ module.exports = TextFx;
 
 
 
-},{"charming":1,"scrollmagic":6}]},{},[10]);
+},{"charming":2,"scrollmagic":7}]},{},[13]);

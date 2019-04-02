@@ -655,7 +655,7 @@ module.exports = function() {
 
         var form = document.getElementById( "isf-form__adidas" );
 
-        console.log("Endpoint: Adidas");
+        //console.log("Endpoint: Adidas");
 
         // test if both cb are checked
         var buttonSubmit = document.querySelector( ".adidas-form__submit" );
@@ -740,11 +740,11 @@ module.exports = function() {
         XHR.setRequestHeader('Accept', 'application/json');
         XHR.setRequestHeader('Access-Control-Allow-Origin', '*');
 
-        console.log(JSON.stringify(adidasData));
+        //console.log(JSON.stringify(adidasData));
 
         XHR.onreadystatechange = function() {
             if (XHR.readyState == XMLHttpRequest.DONE) {
-                console.log(XHR.responseText);
+                //console.log(XHR.responseText);
             }
         };
         XHR.send(JSON.stringify(adidasData));

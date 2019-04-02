@@ -8,6 +8,34 @@
   perspective: 2000px;
 }
 
+.xpr-point__img {
+  height: 100vh;
+  width: 100vh;
+  position: absolute;
+  left: 50%;
+  margin-left: -50vh;
+}
+
+.xpr-point__svg {
+  width: 100vh;
+  height: 100vh;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.xpr-point__svg__clip {
+  position: relative;
+}
+.xpr-point__svg__clip path {
+  visibility: hidden;
+}
+.xpr-point__svg__clip path:first-of-type {
+  visibility: visible;
+}
+
 .xpr-map {
   width: 500vw;
   height: 200vh;
