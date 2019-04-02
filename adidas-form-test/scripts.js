@@ -732,7 +732,6 @@ module.exports = function() {
                     break;
             }
         }
-        console.log("Philipp's solution");
         XHR.open("POST", "https://adidas-highsnobiety-subscribe.herokuapp.com/subscribe", true);
         XHR.setRequestHeader('Content-Type', 'application/json');
         XHR.setRequestHeader('Accept', 'application/json');
