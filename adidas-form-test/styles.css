@@ -1859,3 +1859,8 @@ form {
 .wrap-post{
 	background-color: black;
 }
+span a,
+p a{
+	color: white;
+	text-decoration: underline;
+}
