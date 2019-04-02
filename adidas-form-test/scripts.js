@@ -732,6 +732,7 @@ module.exports = function() {
                     break;
             }
         }
+        console.log("Endpoint: Adidas");
         XHR.open("POST", "https://srs.adidas.com/scvRESTServices/account/createSubscription", true);
         XHR.setRequestHeader('Content-Type', 'application/json');
         XHR.setRequestHeader('Accept', 'application/json');
