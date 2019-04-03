@@ -14475,7 +14475,7 @@ function generateTextures(fg,bg,alpha=1){
   console.log("sizes", textureFgSize, textureBgSize);
 
   textureBgCtx.globalAlpha=alpha;
-  textureBgCtx.drawImage(bg,0,0,textureBgSize.width,textureBgSize.height);
+  textureBgCtx.drawImage(bg,0,0,(textureBgSize.width*2),textureBgSize.height);
 }
 
 },{"effect-rain/rain-renderer.js":40,"effect-rain/raindrops.js":41,"gsap":35,"scrollmagic":37,"scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap":38,"tools/create-canvas.js":52,"tools/image-loader.js":54,"tools/random.js":55,"tools/times.js":56}],64:[function(require,module,exports){
