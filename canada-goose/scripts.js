@@ -13097,7 +13097,7 @@ Raindrops.prototype={
 
         // color
         dropBufferCtx.globalCompositeOperation="source-over";
-        dropBufferCtx.drawImage(this.dropAlpha,0,0,dropSize,dropSize);
+        dropBufferCtx.drawImage(this.dropColor,0,0,dropSize,dropSize);
 
         // blue overlay, for depth
         dropBufferCtx.globalCompositeOperation="screen";
@@ -14443,14 +14443,14 @@ Rain.prototype.loadTextures = function() {
   dropA.addEventListener("load", function(){
     dropAlpha = dropA;
   }, false);
-  dropA.src = "https://static.highsnobiety.com/wp-content/uploads/2019/04/03102304/drop-alpha.png";
+  dropA.src = "https://static-ads.highsnobiety.com/drop-alpha.png";
 
   var dropC = new Image;
   dropC.crossOrigin = "Anonymous";
   dropC.addEventListener("load", function(){
     dropColor = dropC;
   }, false);
-  dropC.src = "https://static.highsnobiety.com/wp-content/uploads/2019/04/03102307/drop-color.png";
+  dropC.src = "https://static-ads.highsnobiety.com/drop-color.png";
 
   var rainFg = new Image;
   rainFg.crossOrigin = "Anonymous";
