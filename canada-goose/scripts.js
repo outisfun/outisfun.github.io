@@ -13097,7 +13097,7 @@ Raindrops.prototype={
 
         // color
         dropBufferCtx.globalCompositeOperation="source-over";
-        dropBufferCtx.drawImage(this.dropColor,0,0,dropSize,dropSize);
+        dropBufferCtx.drawImage(this.dropAlpha,0,0,dropSize,dropSize);
 
         // blue overlay, for depth
         dropBufferCtx.globalCompositeOperation="screen";
