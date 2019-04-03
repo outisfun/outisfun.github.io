@@ -14463,7 +14463,7 @@ Rain.prototype.loadTextures = function() {
     dropC.src = "https://static-ads.highsnobiety.com/drop-color.png";
     
   }, false);
-  rainFg.src = "https://static.highsnobiety.com/wp-content/uploads/2019/04/03101928/kg_header1.jpg";
+  rainFg.src = "https://static-ads.highsnobiety.com/ks-00235.jpg";
 
 
 
