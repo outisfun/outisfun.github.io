@@ -14356,10 +14356,6 @@ var {random, chance} = require("tools/random.js");
 
 
 let textureRainFg, textureRainBg,
-  textureStormLightningFg, textureStormLightningBg,
-  textureFalloutFg, textureFalloutBg,
-  textureSunFg, textureSunBg,
-  textureDrizzleFg, textureDrizzleBg,
   dropColor, dropAlpha;
 
 let textureFg,
@@ -14390,7 +14386,6 @@ let blend={v:0};
 
 module.exports = function(mod, controller, options){
 
-    console.log("that guy", mod);
     var rain = new Rain(mod);
 };
 
@@ -14401,7 +14396,6 @@ function Rain(el, options) {
 }
 
 Rain.prototype.init = function() {
-  console.log('initing');
   canvas=this.DOM.el;
 
   let dpi=window.devicePixelRatio;
@@ -14433,7 +14427,7 @@ Rain.prototype.init = function() {
   renderer = new RainRenderer(canvas, raindrops.canvas, textureFg, textureBg, null,{
     brightness:1.04,
     alphaMultiply:6,
-    alphaSubtract:3,
+    alphaSubtract:3
     // minRefraction:256,
     // maxRefraction:512
   });
@@ -14442,46 +14436,34 @@ Rain.prototype.init = function() {
 };
 
 Rain.prototype.loadTextures = function() {
-    var self = this;
-    loadImages([
-        {name:"dropAlpha",src:"img/drop-alpha.png"},
-        {name:"dropColor",src:"img/drop-color.png"},
+  var self = this;
+ 
+  var dropA = new Image;
+  dropA.crossOrigin = "Anonymous";
+  dropA.addEventListener("load", function(){
+    dropAlpha = dropA;
+  }, false);
+  dropA.src = "https://static.highsnobiety.com/wp-content/uploads/2019/04/03102304/drop-alpha.png";
 
-        {name:"textureRainFg",src:"img/weather/kg_chapter_fg.jpg"},
-        {name:"textureRainBg",src:"img/weather/kg_chapter_bg.jpg"},
+  var dropC = new Image;
+  dropC.crossOrigin = "Anonymous";
+  dropC.addEventListener("load", function(){
+    dropColor = dropC;
+  }, false);
+  dropC.src = "https://static.highsnobiety.com/wp-content/uploads/2019/04/03102307/drop-color.png";
 
-        {name:"textureStormLightningFg",src:"img/weather/texture-storm-lightning-fg.png"},
-        {name:"textureStormLightningBg",src:"img/weather/texture-storm-lightning-bg.png"},
+  var rainFg = new Image;
+  rainFg.crossOrigin = "Anonymous";
+  rainFg.addEventListener("load", function(){
+    textureRainFg = rainFg;
+    textureRainBg = rainFg;
 
-        {name:"textureFalloutFg",src:"img/weather/texture-fallout-fg.png"},
-        {name:"textureFalloutBg",src:"img/weather/texture-fallout-bg.png"},
+    self.init();
+  }, false);
+  rainFg.src = "https://static.highsnobiety.com/wp-content/uploads/2019/04/03101928/kg_header1.jpg";
 
-        {name:"textureSunFg",src:"img/weather/texture-sun-fg.png"},
-        {name:"textureSunBg",src:"img/weather/texture-sun-bg.png"},
 
-        {name:"textureDrizzleFg",src:"img/weather/texture-drizzle-fg.png"},
-        {name:"textureDrizzleBg",src:"img/weather/texture-drizzle-bg.png"},
-    ]).then((images)=>{
-        textureRainFg = images[2].img;
-        textureRainBg = images[3].img;
 
-        textureFalloutFg = images[6].img;
-        textureFalloutBg = images[7].img;
-
-        textureStormLightningFg = images[4].img;
-        textureStormLightningBg = images[5].img;
-
-        textureSunFg = images[8].img;
-        textureSunBg = images[9].img;
-
-        textureDrizzleFg = images[10].img;
-        textureDrizzleBg = images[11].img;
-
-        dropColor = images[1].img;
-        dropAlpha = images[0].img;
-
-        self.init();
-    });
 };
 
 function generateTextures(fg,bg,alpha=1){
