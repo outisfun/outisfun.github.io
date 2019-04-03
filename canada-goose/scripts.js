@@ -14438,19 +14438,7 @@ Rain.prototype.init = function() {
 Rain.prototype.loadTextures = function() {
   var self = this;
  
-  var dropA = new Image;
-  dropA.crossOrigin = "Anonymous";
-  dropA.addEventListener("load", function(){
-    dropAlpha = dropA;
-  }, false);
-  dropA.src = "https://static-ads.highsnobiety.com/drop-alpha.png";
-
-  var dropC = new Image;
-  dropC.crossOrigin = "Anonymous";
-  dropC.addEventListener("load", function(){
-    dropColor = dropC;
-  }, false);
-  dropC.src = "https://static-ads.highsnobiety.com/drop-alpha.png";
+  
 
   var rainFg = new Image;
   rainFg.crossOrigin = "Anonymous";
@@ -14458,7 +14446,21 @@ Rain.prototype.loadTextures = function() {
     textureRainFg = rainFg;
     textureRainBg = rainFg;
 
-    self.init();
+    var dropA = new Image;
+    dropA.crossOrigin = "Anonymous";
+    dropA.addEventListener("load", function(){
+      dropAlpha = dropA;
+    }, false);
+    dropA.src = "https://static-ads.highsnobiety.com/drop-alpha.png";
+
+    var dropC = new Image;
+    dropC.crossOrigin = "Anonymous";
+    dropC.addEventListener("load", function(){
+      dropColor = dropC;
+      self.init();
+    }, false);
+    dropC.src = "https://static-ads.highsnobiety.com/drop-color.png";
+    
   }, false);
   rainFg.src = "https://static.highsnobiety.com/wp-content/uploads/2019/04/03101928/kg_header1.jpg";
 
