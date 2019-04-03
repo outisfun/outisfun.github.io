@@ -14443,7 +14443,7 @@ Rain.prototype.loadTextures = function() {
   dropA.addEventListener("load", function(){
     dropAlpha = dropA;
   }, false);
-  dropA.src = "https://static.highsnobiety.com/wp-content/uploads/2019/04/03102304/drop-alpha.png";
+  dropA.src = "https://static-ads.highsnobiety.com/drop-alpha.png";
 
   var dropC = new Image;
   dropC.crossOrigin = "Anonymous";
