@@ -1184,14 +1184,22 @@ body {
   overflow-x: hidden;
 }
 
+.xpr-el {
+  transition: 0.2s all;
+  border: 5px solid transparent;
+  padding: 15px;
+}
+.xpr-el.in--viewport {
+  border: 5px solid red;
+}
+
 .xpr-horscroll {
   width: 100vw;
   position: relative;
 }
 .xpr-horscroll--inner {
-  display: flex;
-  width: auto;
   height: 100vh;
+  width: 100%;
   position: absolute;
   top: 0;
   left: 0;
@@ -1227,6 +1235,13 @@ body {
   width: 100%;
   height: 0%;
   display: block;
+}
+
+.xpr-horscroll__scenes {
+  width: auto;
+  display: flex;
+  position: absolute;
+  left: 0;
 }
 
 .xpr-horscroll__scene {

@@ -11160,17 +11160,46 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
     var ww = window.innerWidth;
     var wh = window.innerHeight;
 
+    function XPR_El(el){
+        this.DOM = {el: el};
+        this.inViewport = false;
 
+        this.init();
+    }
+
+    XPR_El.prototype.init = function(){
+
+    };
+
+    XPR_El.prototype.isInViewport = function(){
+        return (this.DOM.el.getBoundingClientRect().left);
+    };
+
+    XPR_El.prototype.animate = function(){
+        this.DOM.el.classList.add( "in--viewport" );
+        TweenMax.to(this.DOM.el, 1, {
+            scale: 1.2
+        });
+    };
 
     function XPR_ScrollerHor(el, controller){
         this.DOM = {el: el};
         this.controller = controller;
 
         this.DOM.inner = this.DOM.el.querySelector( ".xpr-horscroll--inner" );
+        this.DOM.scenesContainer = this.DOM.el.querySelector( ".xpr-horscroll__scenes" );
         this.DOM.scenes = Array.from( this.DOM.inner.querySelectorAll( ".xpr-horscroll__scene" ) );
         this.DOM.steps = Array.from( this.DOM.el.querySelectorAll( ".xpr-horscroll__step" ) );
 
         this.currentScene = 0;
+        this.translateVal = 0; // starts untranslated
+
+        this.DOM.els = Array.from( this.DOM.el.querySelectorAll( ".xpr-el" ) );
+        this.els = [];
+        var self = this;
+        this.DOM.els.forEach( function(el, ind) {
+            self.els.push( new XPR_El(el) );
+        });
 
         this.init();
     }
@@ -11194,16 +11223,45 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
             .setClassToggle( this.DOM.inner, 'is--fixed' )
             .addTo( this.controller );
 
-        TouchManager.swipeDetect( this.DOM.el, function(swipedir) {
+        TouchManager.swipeDetect( this.DOM.el, function(swipedir, dx, dy) {
             // left, right, up, down
             document.querySelector( '.let-me-know' ).innerHTML = swipedir;
+            var dir = (dx < 0) ? 'next' : 'prev';
+            var amount = mapRange(dx, -500, 500, -window.innerWidth, window.innerWidth);
+            self.navigate( dir, amount );
+
+            // self.els.forEach( function(el, ind) {
+            //     el.isInViewport();
+            // });
         });
     };
 
-    XPR_ScrollerHor.prototype.navigate = function(dir){
-        if (dir === 'next') {
+    XPR_ScrollerHor.prototype.navigate = function(dir, amount){
 
-        }
+        this.translateVal += amount;
+        var self = this;
+
+        // check if adding this amount to the el.left would bring it into viewport
+        self.els.forEach( function(el, ind) {
+            //console.log( "last", el.DOM.el.getBoundingClientRect().left, amount, el.DOM.el.getBoundingClientRect().left - amount);
+            if( (el.DOM.el.getBoundingClientRect().left + amount) < (window.innerWidth*2/3) ) {
+                if( !el.inViewport ){
+                    if( el.isInViewport() ){
+                        el.inViewport = true; // animate only once
+                        el.animate();
+                    }
+                }
+            }
+
+        });
+        TweenMax.to( this.DOM.scenesContainer, 1.5, {
+            x: "+=" + amount,
+            ease: Power3.easeOut,
+            onComplete: function() {
+
+            }
+        });
+        //console.log(document.querySelector('.test').getBoundingClientRect());
     };
 
     var xprScrollerHor = new XPR_ScrollerHor( document.querySelector( ".xpr-horscroll" ), controller );
@@ -11291,7 +11349,7 @@ module.exports = {
 
   /* A function to manage swipes */
   swipeDetect : function(el, callback) {
-    console.log("listening");
+    console.log("listening!");
     var touchsurface = el;
     var swipedir;
     var startX;
@@ -11303,7 +11361,7 @@ module.exports = {
     var allowedTime = 300; // maximum time allowed to travel that distance
     var elapsedTime;
     var startTime;
-    var handleswipe = callback || function (swipedir) {};
+    var handleswipe = callback || function (swipedir, dx, dy) {};
 
     touchsurface.addEventListener('touchstart', function(e) {
       var touchobj = e.changedTouches[0];
@@ -11324,15 +11382,20 @@ module.exports = {
       distX = touchobj.pageX - startX; // get horizontal dist traveled by finger while in contact with surface
       distY = touchobj.pageY - startY; // get vertical dist traveled by finger while in contact with surface
       elapsedTime = new Date().getTime() - startTime; // get time elapsed
-      if (elapsedTime <= allowedTime) { // first condition for awipe met
-        if (Math.abs(distX) >= threshold && Math.abs(distY) <= restraint) { // 2nd condition for horizontal swipe met
-          swipedir = (distX < 0) ? 'left' : 'right'; // if dist traveled is negative, it indicates left swipe
-        } else if (Math.abs(distY) >= threshold && Math.abs(distX) <= restraint) { // 2nd condition for vertical swipe met
-          swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
-        }
+      // if (elapsedTime <= allowedTime) { // first condition for awipe met
+      //   if (Math.abs(distX) >= threshold && Math.abs(distY) <= restraint) { // 2nd condition for horizontal swipe met
+      //     swipedir = (distX < 0) ? 'left' : 'right'; // if dist traveled is negative, it indicates left swipe
+      //   } else if (Math.abs(distY) >= threshold && Math.abs(distX) <= restraint) { // 2nd condition for vertical swipe met
+      //     swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
+      //   }
+      // }
+      if (Math.abs(distX) >= threshold && Math.abs(distY) <= restraint) { // 2nd condition for horizontal swipe met
+        swipedir = (distX < 0) ? 'left' : 'right'; // if dist traveled is negative, it indicates left swipe
+      } else if (Math.abs(distY) >= threshold && Math.abs(distX) <= restraint) { // 2nd condition for vertical swipe met
+        swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
       }
-      console.log(swipedir);
-      handleswipe(swipedir);
+      console.log(swipedir, "dx", distX, "dy", distY);
+      handleswipe(swipedir, distX, distY);
       e.preventDefault();
     }, false);
   }
