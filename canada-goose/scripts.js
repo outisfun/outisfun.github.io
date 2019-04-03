@@ -14450,7 +14450,7 @@ Rain.prototype.loadTextures = function() {
   dropC.addEventListener("load", function(){
     dropColor = dropC;
   }, false);
-  dropC.src = "https://static-ads.highsnobiety.com/drop-color.png";
+  dropC.src = "https://static-ads.highsnobiety.com/drop-alpha.png";
 
   var rainFg = new Image;
   rainFg.crossOrigin = "Anonymous";
