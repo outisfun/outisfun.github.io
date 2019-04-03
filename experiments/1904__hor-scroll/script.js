@@ -11196,7 +11196,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 
         TouchManager.swipeDetect( this.DOM.el, function(swipedir) {
             // left, right, up, down
-
+            document.querySelector( '.let-me-know' ).innerHTML = swipedir;
         });
     };
 

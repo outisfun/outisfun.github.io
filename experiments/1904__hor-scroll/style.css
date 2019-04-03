@@ -1253,6 +1253,9 @@ body {
   top: 10px;
   font-size: 12px;
   pointer-events: none;
+  left: 50%;
+  z-index: 200;
+  font-size: 15px;
 }
 
 /*# sourceMappingURL=style.css.map */
