@@ -11122,302 +11122,142 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 },{"gsap":1,"scrollmagic":2}],4:[function(require,module,exports){
 
 
+
 ( function(window) {
     'use strict';
 
-    // Plugins
+    //Plugins
 
     var ScrollMagic = require('scrollmagic');
     require('scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap');
     var gsap = require('gsap');
 
-    var TouchManager = require( 'touchmanager.js' );
+    console.log("flashlight");
 
-    var getMousePos = function(e){
-        var posx = e.pageX;
-        var posy = e.pageY;
+    // Utilities
+    function valueLimit(val, min, max) {
+      return val < min ? min : (val > max ? max : val);
+    }
+
+    function mapRange(value, low1, high1, low2, high2) {
+        return low2 + (high2 - low2) * (value - low1) / (high1 - low1);
+    }
+
+    var isfTakeoverContainer = getIsfTakeoverContainer();
+
+    //if div exists, use it; if not, make one.
+    function getIsfTakeoverContainer() {
+        if (document.querySelector(".isf-experiment") !== 'null') {
+            return document.querySelector(".isf-experiment");
+        } else {
+            return document.querySelector(".site-body");
+        }
+    }
+
+    function ISF_Takeover(el) {
+        this.DOM = {el: el};
+        this.DOM.shapes = Array.from(this.DOM.el.querySelectorAll('.hsnb-textbox'));
+        this.shapes = [];
+        this.isListeningToMouse = true;
+        this.maxOffset = 120;
+
+        this.flashlight = document.querySelector(".isf-flashlight");
+        this.init();
+    }
+
+    ISF_Takeover.prototype.init = function() {
+        //mobile effect
+        //create shadow shapes directly behind the existing ones
+        var self = this;
+        this.DOM.shapes.forEach(function(shape) {
+            self.shapes.push(new ISF_Shape(shape));
+        });
+
+        //init onmouse effect
+        if( this.isListeningToMouse ) {
+            document.body.addEventListener('mousemove', function(e) {
+                //get mouse position
+                var mpos = getMousePos(e);
+                var ww = window.innerWidth;
+                // self.flashlight.style.top = (mpos.y - ww - 225) + 'px';
+                // self.flashlight.style.left = (mpos.x - ww - 225) + 'px';
+                TweenMax.to(self.flashlight, 1, {
+                    x: (mpos.x - ww - 225),
+                    y: (mpos.y - ww - 225),
+                    ease: Power3.easeOut
+                });
+
+                self.shapes.forEach(function(shape) {
+                    // alternative solution
+                    // var xOffset = valueLimit(( shape.props.left - mpos.x ), -200, 200);
+                    // var yOffset = valueLimit(( shape.props.top - mpos.y ), -200, 200);
+                    var xOffset = mapRange( (shape.props.left - mpos.x), -window.innerWidth, window.innerWidth, -self.maxOffset, self.maxOffset);
+                    var yOffset = mapRange( (shape.props.top - mpos.y), -window.innerHeight, window.innerHeight, -self.maxOffset, self.maxOffset);
+
+                    TweenMax.to(shape.shadow, 1, {
+                        x : xOffset,
+                        y : yOffset,
+                        ease: Power3.easeOut
+                    });
+                });
+            });
+        }
+    };
+
+    function ISF_Shape(el, options) {
+        this.DOM = {el: el};
+        //record units
+
+        var rect = el.getBoundingClientRect();
+        this.props = {
+            top : rect.top,
+            left: rect.left,
+            width: rect.width,
+            height: rect.height
+        };
+        this.init();
+    }
+
+    ISF_Shape.prototype.init = function() {
+        // draw a new element
+        // necessary to consider offset due to scrolling
+
+        // build DOM el
+        var shadow = document.createElement("div");
+        shadow.classList.add("square-shadow");
+        shadow.style.top = this.props.top + 'px';
+        shadow.style.left = this.props.left + 'px';
+        shadow.style.height = this.props.height + 'px';
+        shadow.style.width = this.props.width + 'px';
+        isfTakeoverContainer.appendChild(shadow);
+
+        // assign to object
+        this.shadow = shadow;
+    };
+
+    ISF_Shape.prototype.update = function() {
+
+    };
+
+    var isfTakeover = new ISF_Takeover(isfTakeoverContainer);
+
+    var getMousePos = function(e) {
+        var posx = 0;
+        var posy = 0;
+        if (!e) e = window.event;
+        // if (e.pageX || e.pageY)     {
+        //     posx = e.pageX;
+        //     posy = e.pageY;
+        // }
+        // else if (e.clientX || e.clientY)    {
+        //     posx = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+        //     posy = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+        // }
+        posx = e.pageX;
+        posy = e.pageY;
         return { x : posx, y : posy };
     };
 
-    var mapRange = function(num, in_min, in_max, out_min, out_max)  {
-        return (num - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-    };
-
-    var toggleScroll = function(action) {
-        if(action === 'disable') {
-            document.querySelector('body').classList.add('no-scroll');
-            document.querySelector('html').classList.add('no-scroll');
-        } else if(action === 'enable') {
-            document.querySelector('body').classList.remove('no-scroll');
-            document.querySelector('html').classList.remove('no-scroll');
-        }
-    };
-
-    // DOM
-    var isfContainer = document.querySelector( ".isf-experiment__container" );
-    var controller = new ScrollMagic.Controller();
-
-    var ww = window.innerWidth;
-    var wh = window.innerHeight;
-
-    function XPR_El(el){
-        this.DOM = {el: el};
-        this.inViewport = false;
-        this.animation = this.DOM.el.dataset.anim;
-        console.log(this);
-        this.init();
-    }
-
-    XPR_El.prototype.init = function(){
-
-    };
-
-    XPR_El.prototype.isInViewport = function(){
-        return (this.DOM.el.getBoundingClientRect().left);
-    };
-
-    XPR_El.prototype.animate = function( amount ){
-        console.log("animating");
-        this.DOM.el.classList.add( "in--viewport" );
-        // TweenMax.to(this.DOM.el, 1, {
-        //     scale: 1.2
-        // });
-        if( this.animation === 'parallax' ){
-            // init parallax on move
-            console.log("parallaxing");
-            var pVal = mapRange(amount, -500, 500, -50, 50);
-            TweenMax.to(this.DOM.el, 1, {
-                x: '+=' + pVal
-            });
-        } else if ( this.animation === 'scale' ){
-            TweenMax.to(this.DOM.el, 1, {
-                scale: 1.2
-            });
-        } else if ( this.animation === 'opacity' ){
-            TweenMax.to(this.DOM.el, 1, {
-                opacity: 1
-            });
-        }
-    };
-
-    function XPR_ScrollerHor(el, controller){
-        this.DOM = {el: el};
-        this.controller = controller;
-
-        this.DOM.inner = this.DOM.el.querySelector( ".xpr-horscroll--inner" );
-        this.DOM.scenesContainer = this.DOM.el.querySelector( ".xpr-horscroll__scenes" );
-        this.DOM.scenes = Array.from( this.DOM.inner.querySelectorAll( ".xpr-horscroll__scene" ) );
-        this.DOM.steps = Array.from( this.DOM.el.querySelectorAll( ".xpr-horscroll__step" ) );
-
-        this.currentScene = 0;
-        this.translateVal = 0; // starts untranslated
-
-        this.DOM.els = Array.from( this.DOM.el.querySelectorAll( ".xpr-el" ) );
-        this.els = [];
-        var self = this;
-        this.DOM.els.forEach( function(el, ind) {
-            self.els.push( new XPR_El(el) );
-        });
-
-        this.init();
-    }
-
-    // disable scroll on enter :)
-    XPR_ScrollerHor.prototype.init = function(){
-
-        // fix on screen
-        var self = this;
-        this.scene = new ScrollMagic.Scene({
-            triggerElement: this.DOM.el,
-            triggerHook: 0,
-            duration: (this.DOM.el.offsetHeight - wh)
-        })
-            .on( 'start', function() {
-                self.DOM.inner.classList.remove( 'is--bottom' );
-            })
-            .on( 'end', function() {
-                self.DOM.inner.classList.add( 'is--bottom' );
-            })
-            .setClassToggle( this.DOM.inner, 'is--fixed' )
-            .addTo( this.controller );
-
-        TouchManager.swipeDetect( this.DOM.el, function(swipedir, dx, dy) {
-            // left, right, up, down
-            document.querySelector( '.let-me-know' ).innerHTML = swipedir;
-            var dir = (dx < 0) ? 'next' : 'prev';
-            var amount = mapRange(dx, -500, 500, -window.innerWidth, window.innerWidth);
-            self.navigate( dir, amount );
-
-            // self.els.forEach( function(el, ind) {
-            //     el.isInViewport();
-            // });
-        });
-    };
-
-    XPR_ScrollerHor.prototype.navigate = function(dir, amount){
-
-        this.translateVal += amount;
-        var self = this;
-
-        // check if adding this amount to the el.left would bring it into viewport
-        self.els.forEach( function(el, ind) {
-            console.log(el);
-            //console.log( "last", el.DOM.el.getBoundingClientRect().left, amount, el.DOM.el.getBoundingClientRect().left - amount);
-            if( ((el.DOM.el.getBoundingClientRect().left + amount) < (window.innerWidth*3/4)) && ((el.DOM.el.getBoundingClientRect().left + amount) > (0 - el.DOM.el.getBoundingClientRect().width)) ) {
-                if( el.isInViewport() ){
-                    el.inViewport = true; // animate only once
-                    el.animate( amount );
-                } else {
-                    el.inViewport = false;
-                }
-            }
-
-        });
-        TweenMax.to( this.DOM.scenesContainer, 1.5, {
-            x: "+=" + amount,
-            ease: Power3.easeOut,
-            onComplete: function() {
-
-            }
-        });
-        //console.log(document.querySelector('.test').getBoundingClientRect());
-    };
-
-    var xprScrollerHor = new XPR_ScrollerHor( document.querySelector( ".xpr-horscroll" ), controller );
-
-
 })(window);
 
-
-},{"gsap":1,"scrollmagic":2,"scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap":3,"touchmanager.js":5}],5:[function(require,module,exports){
-
-
-module.exports = {
-
-  /* A function checking if we're touching or not */
-  clickOrTouch : function() {
-    return (document.ontouchstart !== null ? 'mousedown' : 'touchstart');
-  },
-
-  tapOrScroll : function() {
-    var startTime = new Date().getTime(); // record time when finger first makes contact with surface
-
-    touchsurface.addEventListener('touchend', function(e) {
-      var touchobj = e.changedTouches[0];
-      distX = touchobj.pageX - startX; // get horizontal dist traveled by finger while in contact with surface
-      distY = touchobj.pageY - startY; // get vertical dist traveled by finger while in contact with surface
-      elapsedTime = new Date().getTime() - startTime; // get time elapsed
-      if (elapsedTime <= allowedTime) { // first condition for awipe met
-        if (Math.abs(distX) >= threshold && Math.abs(distY) <= restraint) { // 2nd condition for horizontal swipe met
-          swipedir = (distX < 0) ? 'left' : 'right'; // if dist traveled is negative, it indicates left swipe
-        } else if (Math.abs(distY) >= threshold && Math.abs(distX) <= restraint) { // 2nd condition for vertical swipe met
-          swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
-        }
-      }
-      handleswipe(swipedir);
-      e.preventDefault();
-    }, false);
-  },
-
-  isTouch : function() {
-    return (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0));
-  },
-
-  longPress : function(item, doSomething) {
-    var timerID;
-    var counter = 0;
-    var pressHoldEvent = new CustomEvent('pressHold');
-
-    // Increase or decreae value to adjust how long
-    // one should keep pressing down before the pressHold
-    // event fires
-    var pressHoldDuration = 50;
-
-    // Listening for the mouse and touch events
-    item.addEventListener('mousedown', pressingDown, false);
-    item.addEventListener('mouseup', notPressingDown, false);
-    item.addEventListener('mouseleave', notPressingDown, false);
-
-    item.addEventListener('touchstart', pressingDown, false);
-    item.addEventListener('touchend', notPressingDown, false);
-
-    // Listening for our custom pressHold event
-    item.addEventListener('pressHold', doSomething, false);
-
-    function pressingDown(e) {
-      // Start the timer
-      requestAnimationFrame(timer);
-      e.preventDefault();
-    }
-
-    function notPressingDown(e) {
-      // Stop the timer
-      cancelAnimationFrame(timerID);
-      counter = 0;
-    }
-
-    function timer() {
-      if (counter < pressHoldDuration) {
-        timerID = requestAnimationFrame(timer);
-        counter++;
-      } else {
-        doSomething();
-      }
-    }
-  },
-
-  /* A function to manage swipes */
-  swipeDetect : function(el, callback) {
-    console.log("listening!");
-    var touchsurface = el;
-    var swipedir;
-    var startX;
-    var startY;
-    var distX;
-    var distY;
-    var threshold = 150; // required min distance traveled to be considered swipe
-    var restraint = 100; // maximum distance allowed at the same time in perpendicular direction
-    var allowedTime = 300; // maximum time allowed to travel that distance
-    var elapsedTime;
-    var startTime;
-    var handleswipe = callback || function (swipedir, dx, dy) {};
-
-    touchsurface.addEventListener('touchstart', function(e) {
-      var touchobj = e.changedTouches[0];
-      swipedir = 'none';
-      dist = 0;
-      startX = touchobj.pageX;
-      startY = touchobj.pageY;
-      startTime = new Date().getTime(); // record time when finger first makes contact with surface
-      e.preventDefault();
-    }, false);
-
-    touchsurface.addEventListener('touchmove', function(e) {
-      e.preventDefault(); // prevent scrolling when inside DIV
-    }, false);
-
-    touchsurface.addEventListener('touchend', function(e) {
-      var touchobj = e.changedTouches[0];
-      distX = touchobj.pageX - startX; // get horizontal dist traveled by finger while in contact with surface
-      distY = touchobj.pageY - startY; // get vertical dist traveled by finger while in contact with surface
-      elapsedTime = new Date().getTime() - startTime; // get time elapsed
-      // if (elapsedTime <= allowedTime) { // first condition for awipe met
-      //   if (Math.abs(distX) >= threshold && Math.abs(distY) <= restraint) { // 2nd condition for horizontal swipe met
-      //     swipedir = (distX < 0) ? 'left' : 'right'; // if dist traveled is negative, it indicates left swipe
-      //   } else if (Math.abs(distY) >= threshold && Math.abs(distX) <= restraint) { // 2nd condition for vertical swipe met
-      //     swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
-      //   }
-      // }
-      if (Math.abs(distX) >= threshold && Math.abs(distY) <= restraint) { // 2nd condition for horizontal swipe met
-        swipedir = (distX < 0) ? 'left' : 'right'; // if dist traveled is negative, it indicates left swipe
-      } else if (Math.abs(distY) >= threshold && Math.abs(distX) <= restraint) { // 2nd condition for vertical swipe met
-        swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
-      }
-      console.log(swipedir, "dx", distX, "dy", distY);
-      handleswipe(swipedir, distX, distY);
-      e.preventDefault();
-    }, false);
-  }
-};
-
-},{}]},{},[4]);
+},{"gsap":1,"scrollmagic":2,"scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap":3}]},{},[4]);

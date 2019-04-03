@@ -1182,15 +1182,21 @@ body {
 
 .isf-experiment__container {
   overflow-x: hidden;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 300;
 }
 
 .xpr-el {
   transition: 0.2s all;
-  border: 5px solid transparent;
+  border: 3px solid transparent;
   padding: 15px;
 }
 .xpr-el.in--viewport {
-  border: 5px solid red;
+  border: 3px solid #212121;
+}
+
+.xpr-el__group {
+  padding: 15px;
 }
 
 .xpr-horscroll {
@@ -1218,7 +1224,6 @@ body {
 }
 .xpr-horscroll__step {
   height: 100vh;
-  border: 1px solid green;
   z-index: 200;
   position: relative;
 }
@@ -1253,6 +1258,9 @@ body {
 .xpr-horscroll__scene h1 {
   opacity: 0.5;
   transition: 0.2s all;
+}
+.xpr-horscroll__scene--inner {
+  padding: 15px;
 }
 .xpr-horscroll__scene.is--active h1 {
   opacity: 1;

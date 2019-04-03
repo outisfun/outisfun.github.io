@@ -1,4 +1,118 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
+/**
+ * EvEmitter v1.1.0
+ * Lil' event emitter
+ * MIT License
+ */
+
+/* jshint unused: true, undef: true, strict: true */
+
+( function( global, factory ) {
+  // universal module definition
+  /* jshint strict: false */ /* globals define, module, window */
+  if ( typeof define == 'function' && define.amd ) {
+    // AMD - RequireJS
+    define( factory );
+  } else if ( typeof module == 'object' && module.exports ) {
+    // CommonJS - Browserify, Webpack
+    module.exports = factory();
+  } else {
+    // Browser globals
+    global.EvEmitter = factory();
+  }
+
+}( typeof window != 'undefined' ? window : this, function() {
+
+"use strict";
+
+function EvEmitter() {}
+
+var proto = EvEmitter.prototype;
+
+proto.on = function( eventName, listener ) {
+  if ( !eventName || !listener ) {
+    return;
+  }
+  // set events hash
+  var events = this._events = this._events || {};
+  // set listeners array
+  var listeners = events[ eventName ] = events[ eventName ] || [];
+  // only add once
+  if ( listeners.indexOf( listener ) == -1 ) {
+    listeners.push( listener );
+  }
+
+  return this;
+};
+
+proto.once = function( eventName, listener ) {
+  if ( !eventName || !listener ) {
+    return;
+  }
+  // add event
+  this.on( eventName, listener );
+  // set once flag
+  // set onceEvents hash
+  var onceEvents = this._onceEvents = this._onceEvents || {};
+  // set onceListeners object
+  var onceListeners = onceEvents[ eventName ] = onceEvents[ eventName ] || {};
+  // set flag
+  onceListeners[ listener ] = true;
+
+  return this;
+};
+
+proto.off = function( eventName, listener ) {
+  var listeners = this._events && this._events[ eventName ];
+  if ( !listeners || !listeners.length ) {
+    return;
+  }
+  var index = listeners.indexOf( listener );
+  if ( index != -1 ) {
+    listeners.splice( index, 1 );
+  }
+
+  return this;
+};
+
+proto.emitEvent = function( eventName, args ) {
+  var listeners = this._events && this._events[ eventName ];
+  if ( !listeners || !listeners.length ) {
+    return;
+  }
+  // copy over to avoid interference if .off() in listener
+  listeners = listeners.slice(0);
+  args = args || [];
+  // once stuff
+  var onceListeners = this._onceEvents && this._onceEvents[ eventName ];
+
+  for ( var i=0; i < listeners.length; i++ ) {
+    var listener = listeners[i]
+    var isOnce = onceListeners && onceListeners[ listener ];
+    if ( isOnce ) {
+      // remove listener
+      // remove before trigger to prevent recursion
+      this.off( eventName, listener );
+      // unset once flag
+      delete onceListeners[ listener ];
+    }
+    // trigger listener
+    listener.apply( this, args );
+  }
+
+  return this;
+};
+
+proto.allOff = function() {
+  delete this._events;
+  delete this._onceEvents;
+};
+
+return EvEmitter;
+
+}));
+
+},{}],2:[function(require,module,exports){
 (function (global){
 /*!
  * VERSION: 2.0.2
@@ -8015,7 +8129,386 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 
 })((typeof(module) !== "undefined" && module.exports && typeof(global) !== "undefined") ? global : this || window, "TweenMax");
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
+/*!
+ * imagesLoaded v4.1.4
+ * JavaScript is all like "You images are done yet or what?"
+ * MIT License
+ */
+
+( function( window, factory ) { 'use strict';
+  // universal module definition
+
+  /*global define: false, module: false, require: false */
+
+  if ( typeof define == 'function' && define.amd ) {
+    // AMD
+    define( [
+      'ev-emitter/ev-emitter'
+    ], function( EvEmitter ) {
+      return factory( window, EvEmitter );
+    });
+  } else if ( typeof module == 'object' && module.exports ) {
+    // CommonJS
+    module.exports = factory(
+      window,
+      require('ev-emitter')
+    );
+  } else {
+    // browser global
+    window.imagesLoaded = factory(
+      window,
+      window.EvEmitter
+    );
+  }
+
+})( typeof window !== 'undefined' ? window : this,
+
+// --------------------------  factory -------------------------- //
+
+function factory( window, EvEmitter ) {
+
+'use strict';
+
+var $ = window.jQuery;
+var console = window.console;
+
+// -------------------------- helpers -------------------------- //
+
+// extend objects
+function extend( a, b ) {
+  for ( var prop in b ) {
+    a[ prop ] = b[ prop ];
+  }
+  return a;
+}
+
+var arraySlice = Array.prototype.slice;
+
+// turn element or nodeList into an array
+function makeArray( obj ) {
+  if ( Array.isArray( obj ) ) {
+    // use object if already an array
+    return obj;
+  }
+
+  var isArrayLike = typeof obj == 'object' && typeof obj.length == 'number';
+  if ( isArrayLike ) {
+    // convert nodeList to array
+    return arraySlice.call( obj );
+  }
+
+  // array of single index
+  return [ obj ];
+}
+
+// -------------------------- imagesLoaded -------------------------- //
+
+/**
+ * @param {Array, Element, NodeList, String} elem
+ * @param {Object or Function} options - if function, use as callback
+ * @param {Function} onAlways - callback function
+ */
+function ImagesLoaded( elem, options, onAlways ) {
+  // coerce ImagesLoaded() without new, to be new ImagesLoaded()
+  if ( !( this instanceof ImagesLoaded ) ) {
+    return new ImagesLoaded( elem, options, onAlways );
+  }
+  // use elem as selector string
+  var queryElem = elem;
+  if ( typeof elem == 'string' ) {
+    queryElem = document.querySelectorAll( elem );
+  }
+  // bail if bad element
+  if ( !queryElem ) {
+    console.error( 'Bad element for imagesLoaded ' + ( queryElem || elem ) );
+    return;
+  }
+
+  this.elements = makeArray( queryElem );
+  this.options = extend( {}, this.options );
+  // shift arguments if no options set
+  if ( typeof options == 'function' ) {
+    onAlways = options;
+  } else {
+    extend( this.options, options );
+  }
+
+  if ( onAlways ) {
+    this.on( 'always', onAlways );
+  }
+
+  this.getImages();
+
+  if ( $ ) {
+    // add jQuery Deferred object
+    this.jqDeferred = new $.Deferred();
+  }
+
+  // HACK check async to allow time to bind listeners
+  setTimeout( this.check.bind( this ) );
+}
+
+ImagesLoaded.prototype = Object.create( EvEmitter.prototype );
+
+ImagesLoaded.prototype.options = {};
+
+ImagesLoaded.prototype.getImages = function() {
+  this.images = [];
+
+  // filter & find items if we have an item selector
+  this.elements.forEach( this.addElementImages, this );
+};
+
+/**
+ * @param {Node} element
+ */
+ImagesLoaded.prototype.addElementImages = function( elem ) {
+  // filter siblings
+  if ( elem.nodeName == 'IMG' ) {
+    this.addImage( elem );
+  }
+  // get background image on element
+  if ( this.options.background === true ) {
+    this.addElementBackgroundImages( elem );
+  }
+
+  // find children
+  // no non-element nodes, #143
+  var nodeType = elem.nodeType;
+  if ( !nodeType || !elementNodeTypes[ nodeType ] ) {
+    return;
+  }
+  var childImgs = elem.querySelectorAll('img');
+  // concat childElems to filterFound array
+  for ( var i=0; i < childImgs.length; i++ ) {
+    var img = childImgs[i];
+    this.addImage( img );
+  }
+
+  // get child background images
+  if ( typeof this.options.background == 'string' ) {
+    var children = elem.querySelectorAll( this.options.background );
+    for ( i=0; i < children.length; i++ ) {
+      var child = children[i];
+      this.addElementBackgroundImages( child );
+    }
+  }
+};
+
+var elementNodeTypes = {
+  1: true,
+  9: true,
+  11: true
+};
+
+ImagesLoaded.prototype.addElementBackgroundImages = function( elem ) {
+  var style = getComputedStyle( elem );
+  if ( !style ) {
+    // Firefox returns null if in a hidden iframe https://bugzil.la/548397
+    return;
+  }
+  // get url inside url("...")
+  var reURL = /url\((['"])?(.*?)\1\)/gi;
+  var matches = reURL.exec( style.backgroundImage );
+  while ( matches !== null ) {
+    var url = matches && matches[2];
+    if ( url ) {
+      this.addBackground( url, elem );
+    }
+    matches = reURL.exec( style.backgroundImage );
+  }
+};
+
+/**
+ * @param {Image} img
+ */
+ImagesLoaded.prototype.addImage = function( img ) {
+  var loadingImage = new LoadingImage( img );
+  this.images.push( loadingImage );
+};
+
+ImagesLoaded.prototype.addBackground = function( url, elem ) {
+  var background = new Background( url, elem );
+  this.images.push( background );
+};
+
+ImagesLoaded.prototype.check = function() {
+  var _this = this;
+  this.progressedCount = 0;
+  this.hasAnyBroken = false;
+  // complete if no images
+  if ( !this.images.length ) {
+    this.complete();
+    return;
+  }
+
+  function onProgress( image, elem, message ) {
+    // HACK - Chrome triggers event before object properties have changed. #83
+    setTimeout( function() {
+      _this.progress( image, elem, message );
+    });
+  }
+
+  this.images.forEach( function( loadingImage ) {
+    loadingImage.once( 'progress', onProgress );
+    loadingImage.check();
+  });
+};
+
+ImagesLoaded.prototype.progress = function( image, elem, message ) {
+  this.progressedCount++;
+  this.hasAnyBroken = this.hasAnyBroken || !image.isLoaded;
+  // progress event
+  this.emitEvent( 'progress', [ this, image, elem ] );
+  if ( this.jqDeferred && this.jqDeferred.notify ) {
+    this.jqDeferred.notify( this, image );
+  }
+  // check if completed
+  if ( this.progressedCount == this.images.length ) {
+    this.complete();
+  }
+
+  if ( this.options.debug && console ) {
+    console.log( 'progress: ' + message, image, elem );
+  }
+};
+
+ImagesLoaded.prototype.complete = function() {
+  var eventName = this.hasAnyBroken ? 'fail' : 'done';
+  this.isComplete = true;
+  this.emitEvent( eventName, [ this ] );
+  this.emitEvent( 'always', [ this ] );
+  if ( this.jqDeferred ) {
+    var jqMethod = this.hasAnyBroken ? 'reject' : 'resolve';
+    this.jqDeferred[ jqMethod ]( this );
+  }
+};
+
+// --------------------------  -------------------------- //
+
+function LoadingImage( img ) {
+  this.img = img;
+}
+
+LoadingImage.prototype = Object.create( EvEmitter.prototype );
+
+LoadingImage.prototype.check = function() {
+  // If complete is true and browser supports natural sizes,
+  // try to check for image status manually.
+  var isComplete = this.getIsImageComplete();
+  if ( isComplete ) {
+    // report based on naturalWidth
+    this.confirm( this.img.naturalWidth !== 0, 'naturalWidth' );
+    return;
+  }
+
+  // If none of the checks above matched, simulate loading on detached element.
+  this.proxyImage = new Image();
+  this.proxyImage.addEventListener( 'load', this );
+  this.proxyImage.addEventListener( 'error', this );
+  // bind to image as well for Firefox. #191
+  this.img.addEventListener( 'load', this );
+  this.img.addEventListener( 'error', this );
+  this.proxyImage.src = this.img.src;
+};
+
+LoadingImage.prototype.getIsImageComplete = function() {
+  // check for non-zero, non-undefined naturalWidth
+  // fixes Safari+InfiniteScroll+Masonry bug infinite-scroll#671
+  return this.img.complete && this.img.naturalWidth;
+};
+
+LoadingImage.prototype.confirm = function( isLoaded, message ) {
+  this.isLoaded = isLoaded;
+  this.emitEvent( 'progress', [ this, this.img, message ] );
+};
+
+// ----- events ----- //
+
+// trigger specified handler for event type
+LoadingImage.prototype.handleEvent = function( event ) {
+  var method = 'on' + event.type;
+  if ( this[ method ] ) {
+    this[ method ]( event );
+  }
+};
+
+LoadingImage.prototype.onload = function() {
+  this.confirm( true, 'onload' );
+  this.unbindEvents();
+};
+
+LoadingImage.prototype.onerror = function() {
+  this.confirm( false, 'onerror' );
+  this.unbindEvents();
+};
+
+LoadingImage.prototype.unbindEvents = function() {
+  this.proxyImage.removeEventListener( 'load', this );
+  this.proxyImage.removeEventListener( 'error', this );
+  this.img.removeEventListener( 'load', this );
+  this.img.removeEventListener( 'error', this );
+};
+
+// -------------------------- Background -------------------------- //
+
+function Background( url, element ) {
+  this.url = url;
+  this.element = element;
+  this.img = new Image();
+}
+
+// inherit LoadingImage prototype
+Background.prototype = Object.create( LoadingImage.prototype );
+
+Background.prototype.check = function() {
+  this.img.addEventListener( 'load', this );
+  this.img.addEventListener( 'error', this );
+  this.img.src = this.url;
+  // check if image is already complete
+  var isComplete = this.getIsImageComplete();
+  if ( isComplete ) {
+    this.confirm( this.img.naturalWidth !== 0, 'naturalWidth' );
+    this.unbindEvents();
+  }
+};
+
+Background.prototype.unbindEvents = function() {
+  this.img.removeEventListener( 'load', this );
+  this.img.removeEventListener( 'error', this );
+};
+
+Background.prototype.confirm = function( isLoaded, message ) {
+  this.isLoaded = isLoaded;
+  this.emitEvent( 'progress', [ this, this.element, message ] );
+};
+
+// -------------------------- jQuery -------------------------- //
+
+ImagesLoaded.makeJQueryPlugin = function( jQuery ) {
+  jQuery = jQuery || window.jQuery;
+  if ( !jQuery ) {
+    return;
+  }
+  // set local variable
+  $ = jQuery;
+  // $().imagesLoaded()
+  $.fn.imagesLoaded = function( options, callback ) {
+    var instance = new ImagesLoaded( this, options, callback );
+    return instance.jqDeferred.promise( $(this) );
+  };
+};
+// try making plugin
+ImagesLoaded.makeJQueryPlugin();
+
+// --------------------------  -------------------------- //
+
+return ImagesLoaded;
+
+});
+
+},{"ev-emitter":1}],4:[function(require,module,exports){
 /*!
  * ScrollMagic v2.0.6 (2018-10-08)
  * The javascript library for magical scroll interactions.
@@ -10808,7 +11301,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 
 	return ScrollMagic;
 }));
-},{}],3:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 /*!
  * ScrollMagic v2.0.6 (2018-10-08)
  * The javascript library for magical scroll interactions.
@@ -11119,305 +11612,149 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 
 	});
 }));
-},{"gsap":1,"scrollmagic":2}],4:[function(require,module,exports){
+},{"gsap":2,"scrollmagic":4}],6:[function(require,module,exports){
 
+/* TWO DEMO EFFECTS */
 
 ( function(window) {
-    'use strict';
+	'use strict';
+	/* PLUGINS */
 
-    // Plugins
+    console.log("i know places");
 
-    var ScrollMagic = require('scrollmagic');
-    require('scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap');
-    var gsap = require('gsap');
+	var imagesLoaded = require('imagesLoaded');
+	var ScrollMagic = require("scrollmagic");
+	require('scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap');
+	var gsap = require("gsap");
 
-    var TouchManager = require( 'touchmanager.js' );
-
-    var getMousePos = function(e){
-        var posx = e.pageX;
-        var posy = e.pageY;
-        return { x : posx, y : posy };
+    var PTHS = {
+        LOCALDIR : ''
+        //for WP:
+        //LOCALDIR : '/wp-content/themes/highsnobiety/bape/'
     };
 
-    var mapRange = function(num, in_min, in_max, out_min, out_max)  {
-        return (num - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-    };
+	var controller = new ScrollMagic.Controller();
+	var lastScrollTop = 0;
 
-    var toggleScroll = function(action) {
-        if(action === 'disable') {
-            document.querySelector('body').classList.add('no-scroll');
-            document.querySelector('html').classList.add('no-scroll');
-        } else if(action === 'enable') {
-            document.querySelector('body').classList.remove('no-scroll');
-            document.querySelector('html').classList.remove('no-scroll');
-        }
-    };
+    function BapePattern(el, controller) {
+        this.DOM = {prnt: el};
+        this.blobs = [];
 
-    // DOM
-    var isfContainer = document.querySelector( ".isf-experiment__container" );
-    var controller = new ScrollMagic.Controller();
+        this.dirscroll = true;
+        this.isScrollDetected = false;
 
-    var ww = window.innerWidth;
-    var wh = window.innerHeight;
-
-    function XPR_El(el){
-        this.DOM = {el: el};
-        this.inViewport = false;
-        this.animation = this.DOM.el.dataset.anim;
-        console.log(this);
+        this.relPos = 0;
+        this.isReady = false;
         this.init();
     }
 
-    XPR_El.prototype.init = function(){
-
-    };
-
-    XPR_El.prototype.isInViewport = function(){
-        return (this.DOM.el.getBoundingClientRect().left);
-    };
-
-    XPR_El.prototype.animate = function( amount ){
-        console.log("animating");
-        this.DOM.el.classList.add( "in--viewport" );
-        // TweenMax.to(this.DOM.el, 1, {
-        //     scale: 1.2
-        // });
-        if( this.animation === 'parallax' ){
-            // init parallax on move
-            console.log("parallaxing");
-            var pVal = mapRange(amount, -500, 500, -50, 50);
-            TweenMax.to(this.DOM.el, 1, {
-                x: '+=' + pVal
-            });
-        } else if ( this.animation === 'scale' ){
-            TweenMax.to(this.DOM.el, 1, {
-                scale: 1.2
-            });
-        } else if ( this.animation === 'opacity' ){
-            TweenMax.to(this.DOM.el, 1, {
-                opacity: 1
-            });
-        }
-    };
-
-    function XPR_ScrollerHor(el, controller){
-        this.DOM = {el: el};
-        this.controller = controller;
-
-        this.DOM.inner = this.DOM.el.querySelector( ".xpr-horscroll--inner" );
-        this.DOM.scenesContainer = this.DOM.el.querySelector( ".xpr-horscroll__scenes" );
-        this.DOM.scenes = Array.from( this.DOM.inner.querySelectorAll( ".xpr-horscroll__scene" ) );
-        this.DOM.steps = Array.from( this.DOM.el.querySelectorAll( ".xpr-horscroll__step" ) );
-
-        this.currentScene = 0;
-        this.translateVal = 0; // starts untranslated
-
-        this.DOM.els = Array.from( this.DOM.el.querySelectorAll( ".xpr-el" ) );
-        this.els = [];
+    BapePattern.prototype.init = function() {
+        //build pattern
+        //console.log("init");
         var self = this;
-        this.DOM.els.forEach( function(el, ind) {
-            self.els.push( new XPR_El(el) );
-        });
+        this.DOM.patternContainer = document.createElement('div');
+        this.DOM.patternContainer.classList.add('bape-pattern__container');
 
-        this.init();
-    }
-
-    // disable scroll on enter :)
-    XPR_ScrollerHor.prototype.init = function(){
-
-        // fix on screen
-        var self = this;
-        this.scene = new ScrollMagic.Scene({
-            triggerElement: this.DOM.el,
-            triggerHook: 0,
-            duration: (this.DOM.el.offsetHeight - wh)
-        })
-            .on( 'start', function() {
-                self.DOM.inner.classList.remove( 'is--bottom' );
-            })
-            .on( 'end', function() {
-                self.DOM.inner.classList.add( 'is--bottom' );
-            })
-            .setClassToggle( this.DOM.inner, 'is--fixed' )
-            .addTo( this.controller );
-
-        TouchManager.swipeDetect( this.DOM.el, function(swipedir, dx, dy) {
-            // left, right, up, down
-            document.querySelector( '.let-me-know' ).innerHTML = swipedir;
-            var dir = (dx < 0) ? 'next' : 'prev';
-            var amount = mapRange(dx, -500, 500, -window.innerWidth, window.innerWidth);
-            self.navigate( dir, amount );
-
-            // self.els.forEach( function(el, ind) {
-            //     el.isInViewport();
-            // });
-        });
-    };
-
-    XPR_ScrollerHor.prototype.navigate = function(dir, amount){
-
-        this.translateVal += amount;
-        var self = this;
-
-        // check if adding this amount to the el.left would bring it into viewport
-        self.els.forEach( function(el, ind) {
-            console.log(el);
-            //console.log( "last", el.DOM.el.getBoundingClientRect().left, amount, el.DOM.el.getBoundingClientRect().left - amount);
-            if( ((el.DOM.el.getBoundingClientRect().left + amount) < (window.innerWidth*3/4)) && ((el.DOM.el.getBoundingClientRect().left + amount) > (0 - el.DOM.el.getBoundingClientRect().width)) ) {
-                if( el.isInViewport() ){
-                    el.inViewport = true; // animate only once
-                    el.animate( amount );
-                } else {
-                    el.inViewport = false;
+        var client = new XMLHttpRequest();
+        client.open('GET', (PTHS.LOCALDIR + 'assets/tokyo-01.svg') );
+        client.onreadystatechange = function() {
+            if (client.readyState == 4 && client.status == 200) {
+                if (client.responseText)
+                {
+                    self.DOM.patternContainer.innerHTML = client.responseText;
+                    //run through all the paths and contain them in groups
+                    Array.from(self.DOM.patternContainer.querySelectorAll("path")).forEach(function(path) {
+                        //if it's a group, create a blob out of the entirety of it to avoid weird movements of small elements
+                        if (path.parentNode.nodeName.toLowerCase() === "g") {
+                            //path.classList.add("group");
+                            path.parentNode.classList = path.classList;
+                            path.parentNode.classList.add("blob-unit");
+                            //self.blobs.push(new BapeBlob(path.parentNode));
+                        } else if (path.parentNode.nodeName.toLowerCase() === "svg") {
+                            //console.log(path.classList.length);
+                            if( !path.classList.length ){
+                                path.classList.add("color-1");
+                            }
+                            path.classList.add("blob-unit");
+                            //self.blobs.push(new BapeBlob(path));
+                        }
+                    });
+                    self.DOM.blobs = Array.from(self.DOM.patternContainer.querySelectorAll(".blob-unit"));
+                    self.DOM.blobs.forEach(function(blob) {
+                        self.blobs.push(new BapeBlob(blob));
+                    });
+                    self.DOM.prnt.appendChild(self.DOM.patternContainer);
+                    console.log("is changed");
+                    //self.isReady = true;
+                    self.initEvents();
                 }
             }
 
-        });
-        TweenMax.to( this.DOM.scenesContainer, 1.5, {
-            x: "+=" + amount,
-            ease: Power3.easeOut,
-            onComplete: function() {
-
-            }
-        });
-        //console.log(document.querySelector('.test').getBoundingClientRect());
+        };
+        client.send();
     };
 
-    var xprScrollerHor = new XPR_ScrollerHor( document.querySelector( ".xpr-horscroll" ), controller );
+    BapePattern.prototype.initEvents = function() {
+        var self = this;
+        this.DOM.prnt.addEventListener( "mousemove", function(e) {
+            self.blobs.forEach(function(blob) {
+                //console.log(blob);
+                blob.parallaxIt(e);
+            });
+        });
+        //console.log("init events");
+    };
 
+    function BapeBlob(el) {
+        this.DOM = {el: el};
+        this.col = this.DOM.el.classList.value;
+        this.rect = this.DOM.el.getBoundingClientRect();
 
+        this.parValue = Math.random()*5;
+        //console.log(this);
+    }
+
+    BapeBlob.prototype.parallaxIt = function(e) {
+        var rect = this.DOM.el.getBoundingClientRect();
+        var scr = document.documentElement.scrollTop;
+
+        var relX = e.pageX - rect.left;
+        var relY = e.pageY - rect.top - scr;
+
+        var self = this;
+        //console.log(( relX - (rect.width/2) )/rect.width*this.parValue*2 );
+        TweenMax.to(this.DOM.el, 1, {
+            x: ( relX - (rect.width/2) )/rect.width*this.parValue*1,
+            y: ( relY - (rect.height) )/rect.height*this.parValue*1
+        });
+    };
+
+    function getRandomInt(a, b) {
+        for( var key in b ) {
+            if( b.hasOwnProperty( key ) ) {
+                a[key] = b[key];
+            }
+        }
+        console.log(a);
+        return a;
+    }
+
+    function getMousePos(e) {
+        var posx = 0;
+        var posy = 0;
+        if (!e) e = window.event;
+        if (e.pageX || e.pageY) {
+            posx = e.pageX;
+            posy = e.pageY;
+        }
+        else if (e.clientX || e.clientY) {
+            posx = e.clientX + document.body.scrollLeft + document.documentElement.scrollLeft;
+            posy = e.clientY + document.body.scrollTop + document.documentElement.scrollTop;
+        }
+        return { x : posx, y : posy }
+    };
+
+	var Bape = new BapePattern(document.querySelector('body'));
 })(window);
 
-
-},{"gsap":1,"scrollmagic":2,"scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap":3,"touchmanager.js":5}],5:[function(require,module,exports){
-
-
-module.exports = {
-
-  /* A function checking if we're touching or not */
-  clickOrTouch : function() {
-    return (document.ontouchstart !== null ? 'mousedown' : 'touchstart');
-  },
-
-  tapOrScroll : function() {
-    var startTime = new Date().getTime(); // record time when finger first makes contact with surface
-
-    touchsurface.addEventListener('touchend', function(e) {
-      var touchobj = e.changedTouches[0];
-      distX = touchobj.pageX - startX; // get horizontal dist traveled by finger while in contact with surface
-      distY = touchobj.pageY - startY; // get vertical dist traveled by finger while in contact with surface
-      elapsedTime = new Date().getTime() - startTime; // get time elapsed
-      if (elapsedTime <= allowedTime) { // first condition for awipe met
-        if (Math.abs(distX) >= threshold && Math.abs(distY) <= restraint) { // 2nd condition for horizontal swipe met
-          swipedir = (distX < 0) ? 'left' : 'right'; // if dist traveled is negative, it indicates left swipe
-        } else if (Math.abs(distY) >= threshold && Math.abs(distX) <= restraint) { // 2nd condition for vertical swipe met
-          swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
-        }
-      }
-      handleswipe(swipedir);
-      e.preventDefault();
-    }, false);
-  },
-
-  isTouch : function() {
-    return (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0));
-  },
-
-  longPress : function(item, doSomething) {
-    var timerID;
-    var counter = 0;
-    var pressHoldEvent = new CustomEvent('pressHold');
-
-    // Increase or decreae value to adjust how long
-    // one should keep pressing down before the pressHold
-    // event fires
-    var pressHoldDuration = 50;
-
-    // Listening for the mouse and touch events
-    item.addEventListener('mousedown', pressingDown, false);
-    item.addEventListener('mouseup', notPressingDown, false);
-    item.addEventListener('mouseleave', notPressingDown, false);
-
-    item.addEventListener('touchstart', pressingDown, false);
-    item.addEventListener('touchend', notPressingDown, false);
-
-    // Listening for our custom pressHold event
-    item.addEventListener('pressHold', doSomething, false);
-
-    function pressingDown(e) {
-      // Start the timer
-      requestAnimationFrame(timer);
-      e.preventDefault();
-    }
-
-    function notPressingDown(e) {
-      // Stop the timer
-      cancelAnimationFrame(timerID);
-      counter = 0;
-    }
-
-    function timer() {
-      if (counter < pressHoldDuration) {
-        timerID = requestAnimationFrame(timer);
-        counter++;
-      } else {
-        doSomething();
-      }
-    }
-  },
-
-  /* A function to manage swipes */
-  swipeDetect : function(el, callback) {
-    console.log("listening!");
-    var touchsurface = el;
-    var swipedir;
-    var startX;
-    var startY;
-    var distX;
-    var distY;
-    var threshold = 150; // required min distance traveled to be considered swipe
-    var restraint = 100; // maximum distance allowed at the same time in perpendicular direction
-    var allowedTime = 300; // maximum time allowed to travel that distance
-    var elapsedTime;
-    var startTime;
-    var handleswipe = callback || function (swipedir, dx, dy) {};
-
-    touchsurface.addEventListener('touchstart', function(e) {
-      var touchobj = e.changedTouches[0];
-      swipedir = 'none';
-      dist = 0;
-      startX = touchobj.pageX;
-      startY = touchobj.pageY;
-      startTime = new Date().getTime(); // record time when finger first makes contact with surface
-      e.preventDefault();
-    }, false);
-
-    touchsurface.addEventListener('touchmove', function(e) {
-      e.preventDefault(); // prevent scrolling when inside DIV
-    }, false);
-
-    touchsurface.addEventListener('touchend', function(e) {
-      var touchobj = e.changedTouches[0];
-      distX = touchobj.pageX - startX; // get horizontal dist traveled by finger while in contact with surface
-      distY = touchobj.pageY - startY; // get vertical dist traveled by finger while in contact with surface
-      elapsedTime = new Date().getTime() - startTime; // get time elapsed
-      // if (elapsedTime <= allowedTime) { // first condition for awipe met
-      //   if (Math.abs(distX) >= threshold && Math.abs(distY) <= restraint) { // 2nd condition for horizontal swipe met
-      //     swipedir = (distX < 0) ? 'left' : 'right'; // if dist traveled is negative, it indicates left swipe
-      //   } else if (Math.abs(distY) >= threshold && Math.abs(distX) <= restraint) { // 2nd condition for vertical swipe met
-      //     swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
-      //   }
-      // }
-      if (Math.abs(distX) >= threshold && Math.abs(distY) <= restraint) { // 2nd condition for horizontal swipe met
-        swipedir = (distX < 0) ? 'left' : 'right'; // if dist traveled is negative, it indicates left swipe
-      } else if (Math.abs(distY) >= threshold && Math.abs(distX) <= restraint) { // 2nd condition for vertical swipe met
-        swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
-      }
-      console.log(swipedir, "dx", distX, "dy", distY);
-      handleswipe(swipedir, distX, distY);
-      e.preventDefault();
-    }, false);
-  }
-};
-
-},{}]},{},[4]);
+},{"gsap":2,"imagesLoaded":3,"scrollmagic":4,"scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap":5}]},{},[6]);
