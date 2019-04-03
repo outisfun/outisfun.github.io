@@ -14364,8 +14364,11 @@ let textureFg,
   textureBgCtx;
 
 let textureBgSize={
-  width:500,
+  width:384,
   height:256
+}
+if( window.innerWidth<==768 ) {
+  textureBgSize.width = 500;
 }
 let textureFgSize={
   width:96,
