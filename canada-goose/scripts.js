@@ -14472,6 +14472,7 @@ Rain.prototype.loadTextures = function() {
 function generateTextures(fg,bg,alpha=1){
   textureFgCtx.globalAlpha=alpha;
   textureFgCtx.drawImage(fg,0,0,textureFgSize.width,textureFgSize.height);
+  console.log(textureFgSize.width,textureFgSize.height);
 
   textureBgCtx.globalAlpha=alpha;
   textureBgCtx.drawImage(bg,0,0,textureBgSize.width,textureBgSize.height);
