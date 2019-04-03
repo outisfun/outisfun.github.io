@@ -14446,18 +14446,19 @@ Rain.prototype.loadTextures = function() {
     textureRainFg = rainFg;
     textureRainBg = rainFg;
 
-    var dropA = new Image;
-    dropA.crossOrigin = "Anonymous";
-    dropA.addEventListener("load", function(){
-      dropAlpha = dropA;
-    }, false);
-    dropA.src = "https://static-ads.highsnobiety.com/drop-alpha.png";
-
     var dropC = new Image;
     dropC.crossOrigin = "Anonymous";
     dropC.addEventListener("load", function(){
       dropColor = dropC;
-      self.init();
+
+      var dropA = new Image;
+      dropA.crossOrigin = "Anonymous";
+      dropA.addEventListener("load", function(){
+        dropAlpha = dropA;
+        self.init();
+      }, false);
+      dropA.src = "https://static-ads.highsnobiety.com/drop-alpha.png";
+      
     }, false);
     dropC.src = "https://static-ads.highsnobiety.com/drop-color.png";
     
