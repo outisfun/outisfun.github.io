@@ -1180,6 +1180,14 @@ body {
   padding: 0px;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+.isf-experiment {
+  font-family: 'Roboto', sans-serif;
+}
+
 .isf-experiment__container {
   overflow-x: hidden;
   font-family: 'Roboto', sans-serif;
@@ -1200,7 +1208,10 @@ body {
 }
 
 .xpr-horscroll {
+  font-family: 'Roboto', sans-serif;
   width: 100vw;
+  height: 100vh;
+  border: 3px solid blue;
   position: relative;
 }
 .xpr-horscroll--inner {
@@ -1210,7 +1221,7 @@ body {
   top: 0;
   left: 0;
   transition: 0.2s all;
-  background-color: grey;
+  background-color: white;
   color: white;
 }
 .xpr-horscroll--inner.is--fixed {
@@ -1268,17 +1279,86 @@ body {
 
 .isf-placeholder {
   height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.let-me-know {
+.xpr-horscroll__nav {
   position: fixed;
-  color: white;
-  top: 10px;
-  font-size: 12px;
   pointer-events: none;
-  left: 50%;
-  z-index: 200;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
   font-size: 15px;
+  font-weight: 300;
+  z-index: 200;
+  color: white;
+}
+.xpr-horscroll__nav__sideways, .xpr-horscroll__nav__up, .xpr-horscroll__nav__down {
+  opacity: 0;
+  transition: 0.1s all;
+}
+.xpr-horscroll__nav__sideways.is--visible, .xpr-horscroll__nav__up.is--visible, .xpr-horscroll__nav__down.is--visible {
+  opacity: 1;
+}
+.xpr-horscroll__nav__sideways {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  padding: 15px;
+  transform: translateY(-50%);
+}
+.xpr-horscroll__nav__sideways span {
+  position: relative;
+}
+.xpr-horscroll__nav__sideways span:after {
+  content: '';
+  position: absolute;
+  width: 60px;
+  height: 1px;
+  right: -70px;
+  top: 50%;
+  background-color: white;
+}
+.xpr-horscroll__nav__up {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  padding: 15px;
+  transform: translateX(-50%);
+}
+.xpr-horscroll__nav__up span {
+  position: relative;
+}
+.xpr-horscroll__nav__up span:after {
+  content: '';
+  position: absolute;
+  height: 60px;
+  width: 1px;
+  right: 50%;
+  bottom: -70px;
+  background-color: white;
+}
+.xpr-horscroll__nav__down {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  padding: 15px;
+  transform: translateX(-50%);
+}
+.xpr-horscroll__nav__down span {
+  position: relative;
+}
+.xpr-horscroll__nav__down span:after {
+  content: '';
+  position: absolute;
+  height: 60px;
+  width: 1px;
+  right: 50%;
+  top: -70px;
+  background-color: white;
 }
 
 /*# sourceMappingURL=style.css.map */

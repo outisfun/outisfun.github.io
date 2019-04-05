@@ -1,6 +1,2158 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 (function (global){
 /*!
+ * VERSION: 1.9.1
+ * DATE: 2018-05-21
+ * UPDATES AND DOCS AT: http://greensock.com
+ *
+ * @license Copyright (c) 2008-2018, GreenSock. All rights reserved.
+ * This work is subject to the terms at http://greensock.com/standard-license or for
+ * Club GreenSock members, the software agreement that was issued with your membership.
+ * 
+ * @author: Jack Doyle, jack@greensock.com
+ **/
+var _gsScope = (typeof(module) !== "undefined" && module.exports && typeof(global) !== "undefined") ? global : this || window; //helps ensure compatibility with AMD/RequireJS and CommonJS/Node
+(_gsScope._gsQueue || (_gsScope._gsQueue = [])).push( function() {
+
+	"use strict";
+
+	var _doc = (_gsScope.document || {}).documentElement,
+		_window = _gsScope,
+		_max = function(element, axis) {
+			var dim = (axis === "x") ? "Width" : "Height",
+				scroll = "scroll" + dim,
+				client = "client" + dim,
+				body = document.body;
+			return (element === _window || element === _doc || element === body) ? Math.max(_doc[scroll], body[scroll]) - (_window["inner" + dim] || _doc[client] || body[client]) : element[scroll] - element["offset" + dim];
+		},
+		_unwrapElement = function(value) {
+			if (typeof(value) === "string") {
+				value = TweenLite.selector(value);
+			}
+			if (value.length && value !== _window && value[0] && value[0].style && !value.nodeType) {
+				value = value[0];
+			}
+			return (value === _window || (value.nodeType && value.style)) ? value : null;
+		},
+		_buildGetter = function(e, axis) { //pass in an element and an axis ("x" or "y") and it'll return a getter function for the scroll position of that element (like scrollTop or scrollLeft, although if the element is the window, it'll use the pageXOffset/pageYOffset or the documentElement's scrollTop/scrollLeft or document.body's. Basically this streamlines things and makes a very fast getter across browsers.
+			var p = "scroll" + ((axis === "x") ? "Left" : "Top");
+			if (e === _window) {
+				if (e.pageXOffset != null) {
+					p = "page" + axis.toUpperCase() + "Offset";
+				} else if (_doc[p] != null) {
+					e = _doc;
+				} else {
+					e = document.body;
+				}
+			}
+			return function() {
+				return e[p];
+			};
+		},
+		_getOffset = function(element, container) {
+			var rect = _unwrapElement(element).getBoundingClientRect(),
+				b = document.body,
+				isRoot = (!container || container === _window || container === b),
+				cRect = isRoot ? {top:_doc.clientTop - (window.pageYOffset || _doc.scrollTop || b.scrollTop || 0), left:_doc.clientLeft - (window.pageXOffset || _doc.scrollLeft || b.scrollLeft || 0)} : container.getBoundingClientRect(),
+				offsets = {x: rect.left - cRect.left, y: rect.top - cRect.top};
+			if (!isRoot && container) { //only add the current scroll position if it's not the window/body.
+				offsets.x += _buildGetter(container, "x")();
+				offsets.y += _buildGetter(container, "y")();
+			}
+			return offsets;
+			/*	PREVIOUS
+			var rect = _unwrapElement(element).getBoundingClientRect(),
+				isRoot = (!container || container === _window || container === document.body),
+				cRect = (isRoot ? _doc : container).getBoundingClientRect(),
+				offsets = {x: rect.left - cRect.left, y: rect.top - cRect.top};
+			if (!isRoot && container) { //only add the current scroll position if it's not the window/body.
+				offsets.x += _buildGetter(container, "x")();
+				offsets.y += _buildGetter(container, "y")();
+			}
+			return offsets;
+			*/
+		},
+		_parseVal = function(value, target, axis) {
+			var type = typeof(value);
+			return !isNaN(value) ? parseFloat(value) : (type === "number" || (type === "string" && value.charAt(1) === "=")) ? value : (value === "max") ? _max(target, axis) : Math.min(_max(target, axis), _getOffset(value, target)[axis]);
+		},
+
+		ScrollToPlugin = _gsScope._gsDefine.plugin({
+			propName: "scrollTo",
+			API: 2,
+			global: true,
+			version:"1.9.1",
+
+			//called when the tween renders for the first time. This is where initial values should be recorded and any setup routines should run.
+			init: function(target, value, tween) {
+				this._wdw = (target === _window);
+				this._target = target;
+				this._tween = tween;
+				if (typeof(value) !== "object") {
+					value = {y:value}; //if we don't receive an object as the parameter, assume the user intends "y".
+					if (typeof(value.y) === "string" && value.y !== "max" && value.y.charAt(1) !== "=") {
+						value.x = value.y;
+					}
+				} else if (value.nodeType) {
+					value = {y:value, x:value};
+				}
+				this.vars = value;
+				this._autoKill = (value.autoKill !== false);
+				this.getX = _buildGetter(target, "x");
+				this.getY = _buildGetter(target, "y");
+				this.x = this.xPrev = this.getX();
+				this.y = this.yPrev = this.getY();
+				if (value.x != null) {
+					this._addTween(this, "x", this.x, _parseVal(value.x, target, "x") - (value.offsetX || 0), "scrollTo_x", true);
+					this._overwriteProps.push("scrollTo_x");
+				} else {
+					this.skipX = true;
+				}
+				if (value.y != null) {
+					this._addTween(this, "y", this.y, _parseVal(value.y, target, "y") - (value.offsetY || 0), "scrollTo_y", true);
+					this._overwriteProps.push("scrollTo_y");
+				} else {
+					this.skipY = true;
+				}
+				return true;
+			},
+
+			//called each time the values should be updated, and the ratio gets passed as the only parameter (typically it's a value between 0 and 1, but it can exceed those when using an ease like Elastic.easeOut or Back.easeOut, etc.)
+			set: function(v) {
+				this._super.setRatio.call(this, v);
+
+				var x = (this._wdw || !this.skipX) ? this.getX() : this.xPrev,
+					y = (this._wdw || !this.skipY) ? this.getY() : this.yPrev,
+					yDif = y - this.yPrev,
+					xDif = x - this.xPrev,
+					threshold = ScrollToPlugin.autoKillThreshold;
+
+				if (this.x < 0) { //can't scroll to a position less than 0! Might happen if someone uses a Back.easeOut or Elastic.easeOut when scrolling back to the top of the page (for example)
+					this.x = 0;
+				}
+				if (this.y < 0) {
+					this.y = 0;
+				}
+				if (this._autoKill) {
+					//note: iOS has a bug that throws off the scroll by several pixels, so we need to check if it's within 7 pixels of the previous one that we set instead of just looking for an exact match.
+					if (!this.skipX && (xDif > threshold || xDif < -threshold) && x < _max(this._target, "x")) {
+						this.skipX = true; //if the user scrolls separately, we should stop tweening!
+					}
+					if (!this.skipY && (yDif > threshold || yDif < -threshold) && y < _max(this._target, "y")) {
+						this.skipY = true; //if the user scrolls separately, we should stop tweening!
+					}
+					if (this.skipX && this.skipY) {
+						this._tween.kill();
+						if (this.vars.onAutoKill) {
+							this.vars.onAutoKill.apply(this.vars.onAutoKillScope || this._tween, this.vars.onAutoKillParams || []);
+						}
+					}
+				}
+				if (this._wdw) {
+					_window.scrollTo((!this.skipX) ? this.x : x, (!this.skipY) ? this.y : y);
+				} else {
+					if (!this.skipY) {
+						this._target.scrollTop = this.y;
+					}
+					if (!this.skipX) {
+						this._target.scrollLeft = this.x;
+					}
+				}
+				this.xPrev = this.x;
+				this.yPrev = this.y;
+			}
+
+		}),
+		p = ScrollToPlugin.prototype;
+
+	ScrollToPlugin.max = _max;
+	ScrollToPlugin.getOffset = _getOffset;
+	ScrollToPlugin.buildGetter = _buildGetter;
+	ScrollToPlugin.autoKillThreshold = 7;
+
+	p._kill = function(lookup) {
+		if (lookup.scrollTo_x) {
+			this.skipX = true;
+		}
+		if (lookup.scrollTo_y) {
+			this.skipY = true;
+		}
+		return this._super._kill.call(this, lookup);
+	};
+
+}); if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); }
+
+//export to AMD/RequireJS and CommonJS/Node (precursor to full modular build system coming at a later date)
+(function(name) {
+	"use strict";
+	var getGlobal = function() {
+		return (_gsScope.GreenSockGlobals || _gsScope)[name];
+	};
+	if (typeof(module) !== "undefined" && module.exports) { //node
+		require("gsap/umd/TweenLite");
+		module.exports = getGlobal();
+	} else if (typeof(define) === "function" && define.amd) { //AMD
+		define(["gsap/umd/TweenLite"], getGlobal);
+	}
+}("ScrollToPlugin"));
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{"gsap/umd/TweenLite":2}],2:[function(require,module,exports){
+(function (global){
+/*!
+ * VERSION: 2.0.2
+ * DATE: 2018-08-27
+ * UPDATES AND DOCS AT: http://greensock.com
+ *
+ * @license Copyright (c) 2008-2018, GreenSock. All rights reserved.
+ * This work is subject to the terms at http://greensock.com/standard-license or for
+ * Club GreenSock members, the software agreement that was issued with your membership.
+ * 
+ * @author: Jack Doyle, jack@greensock.com
+ */
+(function(window, moduleName) {
+
+		"use strict";
+		var _exports = {},
+			_doc = window.document,
+			_globals = window.GreenSockGlobals = window.GreenSockGlobals || window,
+			existingModule = _globals[moduleName];
+		if (existingModule) {
+			if (typeof(module) !== "undefined" && module.exports) { //node
+				module.exports = existingModule;
+			}
+			return existingModule; //in case the core set of classes is already loaded, don't instantiate twice.
+		}
+		var _namespace = function(ns) {
+				var a = ns.split("."),
+					p = _globals, i;
+				for (i = 0; i < a.length; i++) {
+					p[a[i]] = p = p[a[i]] || {};
+				}
+				return p;
+			},
+			gs = _namespace("com.greensock"),
+			_tinyNum = 0.0000000001,
+			_slice = function(a) { //don't use Array.prototype.slice.call(target, 0) because that doesn't work in IE8 with a NodeList that's returned by querySelectorAll()
+				var b = [],
+					l = a.length,
+					i;
+				for (i = 0; i !== l; b.push(a[i++])) {}
+				return b;
+			},
+			_emptyFunc = function() {},
+			_isArray = (function() { //works around issues in iframe environments where the Array global isn't shared, thus if the object originates in a different window/iframe, "(obj instanceof Array)" will evaluate false. We added some speed optimizations to avoid Object.prototype.toString.call() unless it's absolutely necessary because it's VERY slow (like 20x slower)
+				var toString = Object.prototype.toString,
+					array = toString.call([]);
+				return function(obj) {
+					return obj != null && (obj instanceof Array || (typeof(obj) === "object" && !!obj.push && toString.call(obj) === array));
+				};
+			}()),
+			a, i, p, _ticker, _tickerActive,
+			_defLookup = {},
+
+			/**
+			 * @constructor
+			 * Defines a GreenSock class, optionally with an array of dependencies that must be instantiated first and passed into the definition.
+			 * This allows users to load GreenSock JS files in any order even if they have interdependencies (like CSSPlugin extends TweenPlugin which is
+			 * inside TweenLite.js, but if CSSPlugin is loaded first, it should wait to run its code until TweenLite.js loads and instantiates TweenPlugin
+			 * and then pass TweenPlugin to CSSPlugin's definition). This is all done automatically and internally.
+			 *
+			 * Every definition will be added to a "com.greensock" global object (typically window, but if a window.GreenSockGlobals object is found,
+			 * it will go there as of v1.7). For example, TweenLite will be found at window.com.greensock.TweenLite and since it's a global class that should be available anywhere,
+			 * it is ALSO referenced at window.TweenLite. However some classes aren't considered global, like the base com.greensock.core.Animation class, so
+			 * those will only be at the package like window.com.greensock.core.Animation. Again, if you define a GreenSockGlobals object on the window, everything
+			 * gets tucked neatly inside there instead of on the window directly. This allows you to do advanced things like load multiple versions of GreenSock
+			 * files and put them into distinct objects (imagine a banner ad uses a newer version but the main site uses an older one). In that case, you could
+			 * sandbox the banner one like:
+			 *
+			 * <script>
+			 *     var gs = window.GreenSockGlobals = {}; //the newer version we're about to load could now be referenced in a "gs" object, like gs.TweenLite.to(...). Use whatever alias you want as long as it's unique, "gs" or "banner" or whatever.
+			 * </script>
+			 * <script src="js/greensock/v1.7/TweenMax.js"></script>
+			 * <script>
+			 *     window.GreenSockGlobals = window._gsQueue = window._gsDefine = null; //reset it back to null (along with the special _gsQueue variable) so that the next load of TweenMax affects the window and we can reference things directly like TweenLite.to(...)
+			 * </script>
+			 * <script src="js/greensock/v1.6/TweenMax.js"></script>
+			 * <script>
+			 *     gs.TweenLite.to(...); //would use v1.7
+			 *     TweenLite.to(...); //would use v1.6
+			 * </script>
+			 *
+			 * @param {!string} ns The namespace of the class definition, leaving off "com.greensock." as that's assumed. For example, "TweenLite" or "plugins.CSSPlugin" or "easing.Back".
+			 * @param {!Array.<string>} dependencies An array of dependencies (described as their namespaces minus "com.greensock." prefix). For example ["TweenLite","plugins.TweenPlugin","core.Animation"]
+			 * @param {!function():Object} func The function that should be called and passed the resolved dependencies which will return the actual class for this definition.
+			 * @param {boolean=} global If true, the class will be added to the global scope (typically window unless you define a window.GreenSockGlobals object)
+			 */
+			Definition = function(ns, dependencies, func, global) {
+				this.sc = (_defLookup[ns]) ? _defLookup[ns].sc : []; //subclasses
+				_defLookup[ns] = this;
+				this.gsClass = null;
+				this.func = func;
+				var _classes = [];
+				this.check = function(init) {
+					var i = dependencies.length,
+						missing = i,
+						cur, a, n, cl;
+					while (--i > -1) {
+						if ((cur = _defLookup[dependencies[i]] || new Definition(dependencies[i], [])).gsClass) {
+							_classes[i] = cur.gsClass;
+							missing--;
+						} else if (init) {
+							cur.sc.push(this);
+						}
+					}
+					if (missing === 0 && func) {
+						a = ("com.greensock." + ns).split(".");
+						n = a.pop();
+						cl = _namespace(a.join("."))[n] = this.gsClass = func.apply(func, _classes);
+
+						//exports to multiple environments
+						if (global) {
+							_globals[n] = _exports[n] = cl; //provides a way to avoid global namespace pollution. By default, the main classes like TweenLite, Power1, Strong, etc. are added to window unless a GreenSockGlobals is defined. So if you want to have things added to a custom object instead, just do something like window.GreenSockGlobals = {} before loading any GreenSock files. You can even set up an alias like window.GreenSockGlobals = windows.gs = {} so that you can access everything like gs.TweenLite. Also remember that ALL classes are added to the window.com.greensock object (in their respective packages, like com.greensock.easing.Power1, com.greensock.TweenLite, etc.)
+							if (typeof(module) !== "undefined" && module.exports) { //node
+								if (ns === moduleName) {
+									module.exports = _exports[moduleName] = cl;
+									for (i in _exports) {
+										cl[i] = _exports[i];
+									}
+								} else if (_exports[moduleName]) {
+									_exports[moduleName][n] = cl;
+								}
+							} else if (typeof(define) === "function" && define.amd){ //AMD
+								define((window.GreenSockAMDPath ? window.GreenSockAMDPath + "/" : "") + ns.split(".").pop(), [], function() { return cl; });
+							}
+						}
+						for (i = 0; i < this.sc.length; i++) {
+							this.sc[i].check();
+						}
+					}
+				};
+				this.check(true);
+			},
+
+			//used to create Definition instances (which basically registers a class that has dependencies).
+			_gsDefine = window._gsDefine = function(ns, dependencies, func, global) {
+				return new Definition(ns, dependencies, func, global);
+			},
+
+			//a quick way to create a class that doesn't have any dependencies. Returns the class, but first registers it in the GreenSock namespace so that other classes can grab it (other classes might be dependent on the class).
+			_class = gs._class = function(ns, func, global) {
+				func = func || function() {};
+				_gsDefine(ns, [], function(){ return func; }, global);
+				return func;
+			};
+
+		_gsDefine.globals = _globals;
+
+
+
+/*
+ * ----------------------------------------------------------------
+ * Ease
+ * ----------------------------------------------------------------
+ */
+		var _baseParams = [0, 0, 1, 1],
+			Ease = _class("easing.Ease", function(func, extraParams, type, power) {
+				this._func = func;
+				this._type = type || 0;
+				this._power = power || 0;
+				this._params = extraParams ? _baseParams.concat(extraParams) : _baseParams;
+			}, true),
+			_easeMap = Ease.map = {},
+			_easeReg = Ease.register = function(ease, names, types, create) {
+				var na = names.split(","),
+					i = na.length,
+					ta = (types || "easeIn,easeOut,easeInOut").split(","),
+					e, name, j, type;
+				while (--i > -1) {
+					name = na[i];
+					e = create ? _class("easing."+name, null, true) : gs.easing[name] || {};
+					j = ta.length;
+					while (--j > -1) {
+						type = ta[j];
+						_easeMap[name + "." + type] = _easeMap[type + name] = e[type] = ease.getRatio ? ease : ease[type] || new ease();
+					}
+				}
+			};
+
+		p = Ease.prototype;
+		p._calcEnd = false;
+		p.getRatio = function(p) {
+			if (this._func) {
+				this._params[0] = p;
+				return this._func.apply(null, this._params);
+			}
+			var t = this._type,
+				pw = this._power,
+				r = (t === 1) ? 1 - p : (t === 2) ? p : (p < 0.5) ? p * 2 : (1 - p) * 2;
+			if (pw === 1) {
+				r *= r;
+			} else if (pw === 2) {
+				r *= r * r;
+			} else if (pw === 3) {
+				r *= r * r * r;
+			} else if (pw === 4) {
+				r *= r * r * r * r;
+			}
+			return (t === 1) ? 1 - r : (t === 2) ? r : (p < 0.5) ? r / 2 : 1 - (r / 2);
+		};
+
+		//create all the standard eases like Linear, Quad, Cubic, Quart, Quint, Strong, Power0, Power1, Power2, Power3, and Power4 (each with easeIn, easeOut, and easeInOut)
+		a = ["Linear","Quad","Cubic","Quart","Quint,Strong"];
+		i = a.length;
+		while (--i > -1) {
+			p = a[i]+",Power"+i;
+			_easeReg(new Ease(null,null,1,i), p, "easeOut", true);
+			_easeReg(new Ease(null,null,2,i), p, "easeIn" + ((i === 0) ? ",easeNone" : ""));
+			_easeReg(new Ease(null,null,3,i), p, "easeInOut");
+		}
+		_easeMap.linear = gs.easing.Linear.easeIn;
+		_easeMap.swing = gs.easing.Quad.easeInOut; //for jQuery folks
+
+
+/*
+ * ----------------------------------------------------------------
+ * EventDispatcher
+ * ----------------------------------------------------------------
+ */
+		var EventDispatcher = _class("events.EventDispatcher", function(target) {
+			this._listeners = {};
+			this._eventTarget = target || this;
+		});
+		p = EventDispatcher.prototype;
+
+		p.addEventListener = function(type, callback, scope, useParam, priority) {
+			priority = priority || 0;
+			var list = this._listeners[type],
+				index = 0,
+				listener, i;
+			if (this === _ticker && !_tickerActive) {
+				_ticker.wake();
+			}
+			if (list == null) {
+				this._listeners[type] = list = [];
+			}
+			i = list.length;
+			while (--i > -1) {
+				listener = list[i];
+				if (listener.c === callback && listener.s === scope) {
+					list.splice(i, 1);
+				} else if (index === 0 && listener.pr < priority) {
+					index = i + 1;
+				}
+			}
+			list.splice(index, 0, {c:callback, s:scope, up:useParam, pr:priority});
+		};
+
+		p.removeEventListener = function(type, callback) {
+			var list = this._listeners[type], i;
+			if (list) {
+				i = list.length;
+				while (--i > -1) {
+					if (list[i].c === callback) {
+						list.splice(i, 1);
+						return;
+					}
+				}
+			}
+		};
+
+		p.dispatchEvent = function(type) {
+			var list = this._listeners[type],
+				i, t, listener;
+			if (list) {
+				i = list.length;
+				if (i > 1) { 
+					list = list.slice(0); //in case addEventListener() is called from within a listener/callback (otherwise the index could change, resulting in a skip)
+				}
+				t = this._eventTarget;
+				while (--i > -1) {
+					listener = list[i];
+					if (listener) {
+						if (listener.up) {
+							listener.c.call(listener.s || t, {type:type, target:t});
+						} else {
+							listener.c.call(listener.s || t);
+						}
+					}
+				}
+			}
+		};
+
+
+/*
+ * ----------------------------------------------------------------
+ * Ticker
+ * ----------------------------------------------------------------
+ */
+ 		var _reqAnimFrame = window.requestAnimationFrame,
+			_cancelAnimFrame = window.cancelAnimationFrame,
+			_getTime = Date.now || function() {return new Date().getTime();},
+			_lastUpdate = _getTime();
+
+		//now try to determine the requestAnimationFrame and cancelAnimationFrame functions and if none are found, we'll use a setTimeout()/clearTimeout() polyfill.
+		a = ["ms","moz","webkit","o"];
+		i = a.length;
+		while (--i > -1 && !_reqAnimFrame) {
+			_reqAnimFrame = window[a[i] + "RequestAnimationFrame"];
+			_cancelAnimFrame = window[a[i] + "CancelAnimationFrame"] || window[a[i] + "CancelRequestAnimationFrame"];
+		}
+
+		_class("Ticker", function(fps, useRAF) {
+			var _self = this,
+				_startTime = _getTime(),
+				_useRAF = (useRAF !== false && _reqAnimFrame) ? "auto" : false,
+				_lagThreshold = 500,
+				_adjustedLag = 33,
+				_tickWord = "tick", //helps reduce gc burden
+				_fps, _req, _id, _gap, _nextTime,
+				_tick = function(manual) {
+					var elapsed = _getTime() - _lastUpdate,
+						overlap, dispatch;
+					if (elapsed > _lagThreshold) {
+						_startTime += elapsed - _adjustedLag;
+					}
+					_lastUpdate += elapsed;
+					_self.time = (_lastUpdate - _startTime) / 1000;
+					overlap = _self.time - _nextTime;
+					if (!_fps || overlap > 0 || manual === true) {
+						_self.frame++;
+						_nextTime += overlap + (overlap >= _gap ? 0.004 : _gap - overlap);
+						dispatch = true;
+					}
+					if (manual !== true) { //make sure the request is made before we dispatch the "tick" event so that timing is maintained. Otherwise, if processing the "tick" requires a bunch of time (like 15ms) and we're using a setTimeout() that's based on 16.7ms, it'd technically take 31.7ms between frames otherwise.
+						_id = _req(_tick);
+					}
+					if (dispatch) {
+						_self.dispatchEvent(_tickWord);
+					}
+				};
+
+			EventDispatcher.call(_self);
+			_self.time = _self.frame = 0;
+			_self.tick = function() {
+				_tick(true);
+			};
+
+			_self.lagSmoothing = function(threshold, adjustedLag) {
+				if (!arguments.length) { //if lagSmoothing() is called with no arguments, treat it like a getter that returns a boolean indicating if it's enabled or not. This is purposely undocumented and is for internal use.
+					return (_lagThreshold < 1 / _tinyNum);
+				}
+				_lagThreshold = threshold || (1 / _tinyNum); //zero should be interpreted as basically unlimited
+				_adjustedLag = Math.min(adjustedLag, _lagThreshold, 0);
+			};
+
+			_self.sleep = function() {
+				if (_id == null) {
+					return;
+				}
+				if (!_useRAF || !_cancelAnimFrame) {
+					clearTimeout(_id);
+				} else {
+					_cancelAnimFrame(_id);
+				}
+				_req = _emptyFunc;
+				_id = null;
+				if (_self === _ticker) {
+					_tickerActive = false;
+				}
+			};
+
+			_self.wake = function(seamless) {
+				if (_id !== null) {
+					_self.sleep();
+				} else if (seamless) {
+					_startTime += -_lastUpdate + (_lastUpdate = _getTime());
+				} else if (_self.frame > 10) { //don't trigger lagSmoothing if we're just waking up, and make sure that at least 10 frames have elapsed because of the iOS bug that we work around below with the 1.5-second setTimout().
+					_lastUpdate = _getTime() - _lagThreshold + 5;
+				}
+				_req = (_fps === 0) ? _emptyFunc : (!_useRAF || !_reqAnimFrame) ? function(f) { return setTimeout(f, ((_nextTime - _self.time) * 1000 + 1) | 0); } : _reqAnimFrame;
+				if (_self === _ticker) {
+					_tickerActive = true;
+				}
+				_tick(2);
+			};
+
+			_self.fps = function(value) {
+				if (!arguments.length) {
+					return _fps;
+				}
+				_fps = value;
+				_gap = 1 / (_fps || 60);
+				_nextTime = this.time + _gap;
+				_self.wake();
+			};
+
+			_self.useRAF = function(value) {
+				if (!arguments.length) {
+					return _useRAF;
+				}
+				_self.sleep();
+				_useRAF = value;
+				_self.fps(_fps);
+			};
+			_self.fps(fps);
+
+			//a bug in iOS 6 Safari occasionally prevents the requestAnimationFrame from working initially, so we use a 1.5-second timeout that automatically falls back to setTimeout() if it senses this condition.
+			setTimeout(function() {
+				if (_useRAF === "auto" && _self.frame < 5 && (_doc || {}).visibilityState !== "hidden") {
+					_self.useRAF(false);
+				}
+			}, 1500);
+		});
+
+		p = gs.Ticker.prototype = new gs.events.EventDispatcher();
+		p.constructor = gs.Ticker;
+
+
+/*
+ * ----------------------------------------------------------------
+ * Animation
+ * ----------------------------------------------------------------
+ */
+		var Animation = _class("core.Animation", function(duration, vars) {
+				this.vars = vars = vars || {};
+				this._duration = this._totalDuration = duration || 0;
+				this._delay = Number(vars.delay) || 0;
+				this._timeScale = 1;
+				this._active = (vars.immediateRender === true);
+				this.data = vars.data;
+				this._reversed = (vars.reversed === true);
+
+				if (!_rootTimeline) {
+					return;
+				}
+				if (!_tickerActive) { //some browsers (like iOS 6 Safari) shut down JavaScript execution when the tab is disabled and they [occasionally] neglect to start up requestAnimationFrame again when returning - this code ensures that the engine starts up again properly.
+					_ticker.wake();
+				}
+
+				var tl = this.vars.useFrames ? _rootFramesTimeline : _rootTimeline;
+				tl.add(this, tl._time);
+
+				if (this.vars.paused) {
+					this.paused(true);
+				}
+			});
+
+		_ticker = Animation.ticker = new gs.Ticker();
+		p = Animation.prototype;
+		p._dirty = p._gc = p._initted = p._paused = false;
+		p._totalTime = p._time = 0;
+		p._rawPrevTime = -1;
+		p._next = p._last = p._onUpdate = p._timeline = p.timeline = null;
+		p._paused = false;
+
+
+		//some browsers (like iOS) occasionally drop the requestAnimationFrame event when the user switches to a different tab and then comes back again, so we use a 2-second setTimeout() to sense if/when that condition occurs and then wake() the ticker.
+		var _checkTimeout = function() {
+				if (_tickerActive && _getTime() - _lastUpdate > 2000 && ((_doc || {}).visibilityState !== "hidden" || !_ticker.lagSmoothing())) { //note: if the tab is hidden, we should still wake if lagSmoothing has been disabled.
+					_ticker.wake();
+				}
+				var t = setTimeout(_checkTimeout, 2000);
+				if (t.unref) {
+					// allows a node process to exit even if the timeout’s callback hasn't been invoked. Without it, the node process could hang as this function is called every two seconds.
+					t.unref();
+				}
+			};
+		_checkTimeout();
+
+
+		p.play = function(from, suppressEvents) {
+			if (from != null) {
+				this.seek(from, suppressEvents);
+			}
+			return this.reversed(false).paused(false);
+		};
+
+		p.pause = function(atTime, suppressEvents) {
+			if (atTime != null) {
+				this.seek(atTime, suppressEvents);
+			}
+			return this.paused(true);
+		};
+
+		p.resume = function(from, suppressEvents) {
+			if (from != null) {
+				this.seek(from, suppressEvents);
+			}
+			return this.paused(false);
+		};
+
+		p.seek = function(time, suppressEvents) {
+			return this.totalTime(Number(time), suppressEvents !== false);
+		};
+
+		p.restart = function(includeDelay, suppressEvents) {
+			return this.reversed(false).paused(false).totalTime(includeDelay ? -this._delay : 0, (suppressEvents !== false), true);
+		};
+
+		p.reverse = function(from, suppressEvents) {
+			if (from != null) {
+				this.seek((from || this.totalDuration()), suppressEvents);
+			}
+			return this.reversed(true).paused(false);
+		};
+
+		p.render = function(time, suppressEvents, force) {
+			//stub - we override this method in subclasses.
+		};
+
+		p.invalidate = function() {
+			this._time = this._totalTime = 0;
+			this._initted = this._gc = false;
+			this._rawPrevTime = -1;
+			if (this._gc || !this.timeline) {
+				this._enabled(true);
+			}
+			return this;
+		};
+
+		p.isActive = function() {
+			var tl = this._timeline, //the 2 root timelines won't have a _timeline; they're always active.
+				startTime = this._startTime,
+				rawTime;
+			return (!tl || (!this._gc && !this._paused && tl.isActive() && (rawTime = tl.rawTime(true)) >= startTime && rawTime < startTime + this.totalDuration() / this._timeScale - 0.0000001));
+		};
+
+		p._enabled = function (enabled, ignoreTimeline) {
+			if (!_tickerActive) {
+				_ticker.wake();
+			}
+			this._gc = !enabled;
+			this._active = this.isActive();
+			if (ignoreTimeline !== true) {
+				if (enabled && !this.timeline) {
+					this._timeline.add(this, this._startTime - this._delay);
+				} else if (!enabled && this.timeline) {
+					this._timeline._remove(this, true);
+				}
+			}
+			return false;
+		};
+
+
+		p._kill = function(vars, target) {
+			return this._enabled(false, false);
+		};
+
+		p.kill = function(vars, target) {
+			this._kill(vars, target);
+			return this;
+		};
+
+		p._uncache = function(includeSelf) {
+			var tween = includeSelf ? this : this.timeline;
+			while (tween) {
+				tween._dirty = true;
+				tween = tween.timeline;
+			}
+			return this;
+		};
+
+		p._swapSelfInParams = function(params) {
+			var i = params.length,
+				copy = params.concat();
+			while (--i > -1) {
+				if (params[i] === "{self}") {
+					copy[i] = this;
+				}
+			}
+			return copy;
+		};
+
+		p._callback = function(type) {
+			var v = this.vars,
+				callback = v[type],
+				params = v[type + "Params"],
+				scope = v[type + "Scope"] || v.callbackScope || this,
+				l = params ? params.length : 0;
+			switch (l) { //speed optimization; call() is faster than apply() so use it when there are only a few parameters (which is by far most common). Previously we simply did var v = this.vars; v[type].apply(v[type + "Scope"] || v.callbackScope || this, v[type + "Params"] || _blankArray);
+				case 0: callback.call(scope); break;
+				case 1: callback.call(scope, params[0]); break;
+				case 2: callback.call(scope, params[0], params[1]); break;
+				default: callback.apply(scope, params);
+			}
+		};
+
+//----Animation getters/setters --------------------------------------------------------
+
+		p.eventCallback = function(type, callback, params, scope) {
+			if ((type || "").substr(0,2) === "on") {
+				var v = this.vars;
+				if (arguments.length === 1) {
+					return v[type];
+				}
+				if (callback == null) {
+					delete v[type];
+				} else {
+					v[type] = callback;
+					v[type + "Params"] = (_isArray(params) && params.join("").indexOf("{self}") !== -1) ? this._swapSelfInParams(params) : params;
+					v[type + "Scope"] = scope;
+				}
+				if (type === "onUpdate") {
+					this._onUpdate = callback;
+				}
+			}
+			return this;
+		};
+
+		p.delay = function(value) {
+			if (!arguments.length) {
+				return this._delay;
+			}
+			if (this._timeline.smoothChildTiming) {
+				this.startTime( this._startTime + value - this._delay );
+			}
+			this._delay = value;
+			return this;
+		};
+
+		p.duration = function(value) {
+			if (!arguments.length) {
+				this._dirty = false;
+				return this._duration;
+			}
+			this._duration = this._totalDuration = value;
+			this._uncache(true); //true in case it's a TweenMax or TimelineMax that has a repeat - we'll need to refresh the totalDuration.
+			if (this._timeline.smoothChildTiming) if (this._time > 0) if (this._time < this._duration) if (value !== 0) {
+				this.totalTime(this._totalTime * (value / this._duration), true);
+			}
+			return this;
+		};
+
+		p.totalDuration = function(value) {
+			this._dirty = false;
+			return (!arguments.length) ? this._totalDuration : this.duration(value);
+		};
+
+		p.time = function(value, suppressEvents) {
+			if (!arguments.length) {
+				return this._time;
+			}
+			if (this._dirty) {
+				this.totalDuration();
+			}
+			return this.totalTime((value > this._duration) ? this._duration : value, suppressEvents);
+		};
+
+		p.totalTime = function(time, suppressEvents, uncapped) {
+			if (!_tickerActive) {
+				_ticker.wake();
+			}
+			if (!arguments.length) {
+				return this._totalTime;
+			}
+			if (this._timeline) {
+				if (time < 0 && !uncapped) {
+					time += this.totalDuration();
+				}
+				if (this._timeline.smoothChildTiming) {
+					if (this._dirty) {
+						this.totalDuration();
+					}
+					var totalDuration = this._totalDuration,
+						tl = this._timeline;
+					if (time > totalDuration && !uncapped) {
+						time = totalDuration;
+					}
+					this._startTime = (this._paused ? this._pauseTime : tl._time) - ((!this._reversed ? time : totalDuration - time) / this._timeScale);
+					if (!tl._dirty) { //for performance improvement. If the parent's cache is already dirty, it already took care of marking the ancestors as dirty too, so skip the function call here.
+						this._uncache(false);
+					}
+					//in case any of the ancestor timelines had completed but should now be enabled, we should reset their totalTime() which will also ensure that they're lined up properly and enabled. Skip for animations that are on the root (wasteful). Example: a TimelineLite.exportRoot() is performed when there's a paused tween on the root, the export will not complete until that tween is unpaused, but imagine a child gets restarted later, after all [unpaused] tweens have completed. The startTime of that child would get pushed out, but one of the ancestors may have completed.
+					if (tl._timeline) {
+						while (tl._timeline) {
+							if (tl._timeline._time !== (tl._startTime + tl._totalTime) / tl._timeScale) {
+								tl.totalTime(tl._totalTime, true);
+							}
+							tl = tl._timeline;
+						}
+					}
+				}
+				if (this._gc) {
+					this._enabled(true, false);
+				}
+				if (this._totalTime !== time || this._duration === 0) {
+					if (_lazyTweens.length) {
+						_lazyRender();
+					}
+					this.render(time, suppressEvents, false);
+					if (_lazyTweens.length) { //in case rendering caused any tweens to lazy-init, we should render them because typically when someone calls seek() or time() or progress(), they expect an immediate render.
+						_lazyRender();
+					}
+				}
+			}
+			return this;
+		};
+
+		p.progress = p.totalProgress = function(value, suppressEvents) {
+			var duration = this.duration();
+			return (!arguments.length) ? (duration ? this._time / duration : this.ratio) : this.totalTime(duration * value, suppressEvents);
+		};
+
+		p.startTime = function(value) {
+			if (!arguments.length) {
+				return this._startTime;
+			}
+			if (value !== this._startTime) {
+				this._startTime = value;
+				if (this.timeline) if (this.timeline._sortChildren) {
+					this.timeline.add(this, value - this._delay); //ensures that any necessary re-sequencing of Animations in the timeline occurs to make sure the rendering order is correct.
+				}
+			}
+			return this;
+		};
+
+		p.endTime = function(includeRepeats) {
+			return this._startTime + ((includeRepeats != false) ? this.totalDuration() : this.duration()) / this._timeScale;
+		};
+
+		p.timeScale = function(value) {
+			if (!arguments.length) {
+				return this._timeScale;
+			}
+			var pauseTime, t;
+			value = value || _tinyNum; //can't allow zero because it'll throw the math off
+			if (this._timeline && this._timeline.smoothChildTiming) {
+				pauseTime = this._pauseTime;
+				t = (pauseTime || pauseTime === 0) ? pauseTime : this._timeline.totalTime();
+				this._startTime = t - ((t - this._startTime) * this._timeScale / value);
+			}
+			this._timeScale = value;
+			t = this.timeline;
+			while (t && t.timeline) { //must update the duration/totalDuration of all ancestor timelines immediately in case in the middle of a render loop, one tween alters another tween's timeScale which shoves its startTime before 0, forcing the parent timeline to shift around and shiftChildren() which could affect that next tween's render (startTime). Doesn't matter for the root timeline though.
+				t._dirty = true;
+				t.totalDuration();
+				t = t.timeline;
+			}
+			return this;
+		};
+
+		p.reversed = function(value) {
+			if (!arguments.length) {
+				return this._reversed;
+			}
+			if (value != this._reversed) {
+				this._reversed = value;
+				this.totalTime(((this._timeline && !this._timeline.smoothChildTiming) ? this.totalDuration() - this._totalTime : this._totalTime), true);
+			}
+			return this;
+		};
+
+		p.paused = function(value) {
+			if (!arguments.length) {
+				return this._paused;
+			}
+			var tl = this._timeline,
+				raw, elapsed;
+			if (value != this._paused) if (tl) {
+				if (!_tickerActive && !value) {
+					_ticker.wake();
+				}
+				raw = tl.rawTime();
+				elapsed = raw - this._pauseTime;
+				if (!value && tl.smoothChildTiming) {
+					this._startTime += elapsed;
+					this._uncache(false);
+				}
+				this._pauseTime = value ? raw : null;
+				this._paused = value;
+				this._active = this.isActive();
+				if (!value && elapsed !== 0 && this._initted && this.duration()) {
+					raw = tl.smoothChildTiming ? this._totalTime : (raw - this._startTime) / this._timeScale;
+					this.render(raw, (raw === this._totalTime), true); //in case the target's properties changed via some other tween or manual update by the user, we should force a render.
+				}
+			}
+			if (this._gc && !value) {
+				this._enabled(true, false);
+			}
+			return this;
+		};
+
+
+/*
+ * ----------------------------------------------------------------
+ * SimpleTimeline
+ * ----------------------------------------------------------------
+ */
+		var SimpleTimeline = _class("core.SimpleTimeline", function(vars) {
+			Animation.call(this, 0, vars);
+			this.autoRemoveChildren = this.smoothChildTiming = true;
+		});
+
+		p = SimpleTimeline.prototype = new Animation();
+		p.constructor = SimpleTimeline;
+		p.kill()._gc = false;
+		p._first = p._last = p._recent = null;
+		p._sortChildren = false;
+
+		p.add = p.insert = function(child, position, align, stagger) {
+			var prevTween, st;
+			child._startTime = Number(position || 0) + child._delay;
+			if (child._paused) if (this !== child._timeline) { //we only adjust the _pauseTime if it wasn't in this timeline already. Remember, sometimes a tween will be inserted again into the same timeline when its startTime is changed so that the tweens in the TimelineLite/Max are re-ordered properly in the linked list (so everything renders in the proper order).
+				child._pauseTime = this.rawTime() - (child._timeline.rawTime() - child._pauseTime);
+			}
+			if (child.timeline) {
+				child.timeline._remove(child, true); //removes from existing timeline so that it can be properly added to this one.
+			}
+			child.timeline = child._timeline = this;
+			if (child._gc) {
+				child._enabled(true, true);
+			}
+			prevTween = this._last;
+			if (this._sortChildren) {
+				st = child._startTime;
+				while (prevTween && prevTween._startTime > st) {
+					prevTween = prevTween._prev;
+				}
+			}
+			if (prevTween) {
+				child._next = prevTween._next;
+				prevTween._next = child;
+			} else {
+				child._next = this._first;
+				this._first = child;
+			}
+			if (child._next) {
+				child._next._prev = child;
+			} else {
+				this._last = child;
+			}
+			child._prev = prevTween;
+			this._recent = child;
+			if (this._timeline) {
+				this._uncache(true);
+			}
+			return this;
+		};
+
+		p._remove = function(tween, skipDisable) {
+			if (tween.timeline === this) {
+				if (!skipDisable) {
+					tween._enabled(false, true);
+				}
+
+				if (tween._prev) {
+					tween._prev._next = tween._next;
+				} else if (this._first === tween) {
+					this._first = tween._next;
+				}
+				if (tween._next) {
+					tween._next._prev = tween._prev;
+				} else if (this._last === tween) {
+					this._last = tween._prev;
+				}
+				tween._next = tween._prev = tween.timeline = null;
+				if (tween === this._recent) {
+					this._recent = this._last;
+				}
+
+				if (this._timeline) {
+					this._uncache(true);
+				}
+			}
+			return this;
+		};
+
+		p.render = function(time, suppressEvents, force) {
+			var tween = this._first,
+				next;
+			this._totalTime = this._time = this._rawPrevTime = time;
+			while (tween) {
+				next = tween._next; //record it here because the value could change after rendering...
+				if (tween._active || (time >= tween._startTime && !tween._paused && !tween._gc)) {
+					if (!tween._reversed) {
+						tween.render((time - tween._startTime) * tween._timeScale, suppressEvents, force);
+					} else {
+						tween.render(((!tween._dirty) ? tween._totalDuration : tween.totalDuration()) - ((time - tween._startTime) * tween._timeScale), suppressEvents, force);
+					}
+				}
+				tween = next;
+			}
+		};
+
+		p.rawTime = function() {
+			if (!_tickerActive) {
+				_ticker.wake();
+			}
+			return this._totalTime;
+		};
+
+/*
+ * ----------------------------------------------------------------
+ * TweenLite
+ * ----------------------------------------------------------------
+ */
+		var TweenLite = _class("TweenLite", function(target, duration, vars) {
+				Animation.call(this, duration, vars);
+				this.render = TweenLite.prototype.render; //speed optimization (avoid prototype lookup on this "hot" method)
+
+				if (target == null) {
+					throw "Cannot tween a null target.";
+				}
+
+				this.target = target = (typeof(target) !== "string") ? target : TweenLite.selector(target) || target;
+
+				var isSelector = (target.jquery || (target.length && target !== window && target[0] && (target[0] === window || (target[0].nodeType && target[0].style && !target.nodeType)))),
+					overwrite = this.vars.overwrite,
+					i, targ, targets;
+
+				this._overwrite = overwrite = (overwrite == null) ? _overwriteLookup[TweenLite.defaultOverwrite] : (typeof(overwrite) === "number") ? overwrite >> 0 : _overwriteLookup[overwrite];
+
+				if ((isSelector || target instanceof Array || (target.push && _isArray(target))) && typeof(target[0]) !== "number") {
+					this._targets = targets = _slice(target);  //don't use Array.prototype.slice.call(target, 0) because that doesn't work in IE8 with a NodeList that's returned by querySelectorAll()
+					this._propLookup = [];
+					this._siblings = [];
+					for (i = 0; i < targets.length; i++) {
+						targ = targets[i];
+						if (!targ) {
+							targets.splice(i--, 1);
+							continue;
+						} else if (typeof(targ) === "string") {
+							targ = targets[i--] = TweenLite.selector(targ); //in case it's an array of strings
+							if (typeof(targ) === "string") {
+								targets.splice(i+1, 1); //to avoid an endless loop (can't imagine why the selector would return a string, but just in case)
+							}
+							continue;
+						} else if (targ.length && targ !== window && targ[0] && (targ[0] === window || (targ[0].nodeType && targ[0].style && !targ.nodeType))) { //in case the user is passing in an array of selector objects (like jQuery objects), we need to check one more level and pull things out if necessary. Also note that <select> elements pass all the criteria regarding length and the first child having style, so we must also check to ensure the target isn't an HTML node itself.
+							targets.splice(i--, 1);
+							this._targets = targets = targets.concat(_slice(targ));
+							continue;
+						}
+						this._siblings[i] = _register(targ, this, false);
+						if (overwrite === 1) if (this._siblings[i].length > 1) {
+							_applyOverwrite(targ, this, null, 1, this._siblings[i]);
+						}
+					}
+
+				} else {
+					this._propLookup = {};
+					this._siblings = _register(target, this, false);
+					if (overwrite === 1) if (this._siblings.length > 1) {
+						_applyOverwrite(target, this, null, 1, this._siblings);
+					}
+				}
+				if (this.vars.immediateRender || (duration === 0 && this._delay === 0 && this.vars.immediateRender !== false)) {
+					this._time = -_tinyNum; //forces a render without having to set the render() "force" parameter to true because we want to allow lazying by default (using the "force" parameter always forces an immediate full render)
+					this.render(Math.min(0, -this._delay)); //in case delay is negative
+				}
+			}, true),
+			_isSelector = function(v) {
+				return (v && v.length && v !== window && v[0] && (v[0] === window || (v[0].nodeType && v[0].style && !v.nodeType))); //we cannot check "nodeType" if the target is window from within an iframe, otherwise it will trigger a security error in some browsers like Firefox.
+			},
+			_autoCSS = function(vars, target) {
+				var css = {},
+					p;
+				for (p in vars) {
+					if (!_reservedProps[p] && (!(p in target) || p === "transform" || p === "x" || p === "y" || p === "width" || p === "height" || p === "className" || p === "border") && (!_plugins[p] || (_plugins[p] && _plugins[p]._autoCSS))) { //note: <img> elements contain read-only "x" and "y" properties. We should also prioritize editing css width/height rather than the element's properties.
+						css[p] = vars[p];
+						delete vars[p];
+					}
+				}
+				vars.css = css;
+			};
+
+		p = TweenLite.prototype = new Animation();
+		p.constructor = TweenLite;
+		p.kill()._gc = false;
+
+//----TweenLite defaults, overwrite management, and root updates ----------------------------------------------------
+
+		p.ratio = 0;
+		p._firstPT = p._targets = p._overwrittenProps = p._startAt = null;
+		p._notifyPluginsOfEnabled = p._lazy = false;
+
+		TweenLite.version = "2.0.2";
+		TweenLite.defaultEase = p._ease = new Ease(null, null, 1, 1);
+		TweenLite.defaultOverwrite = "auto";
+		TweenLite.ticker = _ticker;
+		TweenLite.autoSleep = 120;
+		TweenLite.lagSmoothing = function(threshold, adjustedLag) {
+			_ticker.lagSmoothing(threshold, adjustedLag);
+		};
+
+		TweenLite.selector = window.$ || window.jQuery || function(e) {
+			var selector = window.$ || window.jQuery;
+			if (selector) {
+				TweenLite.selector = selector;
+				return selector(e);
+			}
+			if (!_doc) { //in some dev environments (like Angular 6), GSAP gets loaded before the document is defined! So re-query it here if/when necessary.
+				_doc = window.document;
+			}
+			return (!_doc) ? e : (_doc.querySelectorAll ? _doc.querySelectorAll(e) : _doc.getElementById((e.charAt(0) === "#") ? e.substr(1) : e));
+		};
+
+		var _lazyTweens = [],
+			_lazyLookup = {},
+			_numbersExp = /(?:(-|-=|\+=)?\d*\.?\d*(?:e[\-+]?\d+)?)[0-9]/ig,
+			_relExp = /[\+-]=-?[\.\d]/,
+			//_nonNumbersExp = /(?:([\-+](?!(\d|=)))|[^\d\-+=e]|(e(?![\-+][\d])))+/ig,
+			_setRatio = function(v) {
+				var pt = this._firstPT,
+					min = 0.000001,
+					val;
+				while (pt) {
+					val = !pt.blob ? pt.c * v + pt.s : (v === 1 && this.end != null) ? this.end : v ? this.join("") : this.start;
+					if (pt.m) {
+						val = pt.m.call(this._tween, val, this._target || pt.t, this._tween);
+					} else if (val < min) if (val > -min && !pt.blob) { //prevents issues with converting very small numbers to strings in the browser
+						val = 0;
+					}
+					if (!pt.f) {
+						pt.t[pt.p] = val;
+					} else if (pt.fp) {
+						pt.t[pt.p](pt.fp, val);
+					} else {
+						pt.t[pt.p](val);
+					}
+					pt = pt._next;
+				}
+			},
+			//compares two strings (start/end), finds the numbers that are different and spits back an array representing the whole value but with the changing values isolated as elements. For example, "rgb(0,0,0)" and "rgb(100,50,0)" would become ["rgb(", 0, ",", 50, ",0)"]. Notice it merges the parts that are identical (performance optimization). The array also has a linked list of PropTweens attached starting with _firstPT that contain the tweening data (t, p, s, c, f, etc.). It also stores the starting value as a "start" property so that we can revert to it if/when necessary, like when a tween rewinds fully. If the quantity of numbers differs between the start and end, it will always prioritize the end value(s). The pt parameter is optional - it's for a PropTween that will be appended to the end of the linked list and is typically for actually setting the value after all of the elements have been updated (with array.join("")).
+			_blobDif = function(start, end, filter, pt) {
+				var a = [],
+					charIndex = 0,
+					s = "",
+					color = 0,
+					startNums, endNums, num, i, l, nonNumbers, currentNum;
+				a.start = start;
+				a.end = end;
+				start = a[0] = start + ""; //ensure values are strings
+				end = a[1] = end + "";
+				if (filter) {
+					filter(a); //pass an array with the starting and ending values and let the filter do whatever it needs to the values.
+					start = a[0];
+					end = a[1];
+				}
+				a.length = 0;
+				startNums = start.match(_numbersExp) || [];
+				endNums = end.match(_numbersExp) || [];
+				if (pt) {
+					pt._next = null;
+					pt.blob = 1;
+					a._firstPT = a._applyPT = pt; //apply last in the linked list (which means inserting it first)
+				}
+				l = endNums.length;
+				for (i = 0; i < l; i++) {
+					currentNum = endNums[i];
+					nonNumbers = end.substr(charIndex, end.indexOf(currentNum, charIndex)-charIndex);
+					s += (nonNumbers || !i) ? nonNumbers : ","; //note: SVG spec allows omission of comma/space when a negative sign is wedged between two numbers, like 2.5-5.3 instead of 2.5,-5.3 but when tweening, the negative value may switch to positive, so we insert the comma just in case.
+					charIndex += nonNumbers.length;
+					if (color) { //sense rgba() values and round them.
+						color = (color + 1) % 5;
+					} else if (nonNumbers.substr(-5) === "rgba(") {
+						color = 1;
+					}
+					if (currentNum === startNums[i] || startNums.length <= i) {
+						s += currentNum;
+					} else {
+						if (s) {
+							a.push(s);
+							s = "";
+						}
+						num = parseFloat(startNums[i]);
+						a.push(num);
+						a._firstPT = {_next: a._firstPT, t:a, p: a.length-1, s:num, c:((currentNum.charAt(1) === "=") ? parseInt(currentNum.charAt(0) + "1", 10) * parseFloat(currentNum.substr(2)) : (parseFloat(currentNum) - num)) || 0, f:0, m:(color && color < 4) ? Math.round : 0};
+						//note: we don't set _prev because we'll never need to remove individual PropTweens from this list.
+					}
+					charIndex += currentNum.length;
+				}
+				s += end.substr(charIndex);
+				if (s) {
+					a.push(s);
+				}
+				a.setRatio = _setRatio;
+				if (_relExp.test(end)) { //if the end string contains relative values, delete it so that on the final render (in _setRatio()), we don't actually set it to the string with += or -= characters (forces it to use the calculated value).
+					a.end = null;
+				}
+				return a;
+			},
+			//note: "funcParam" is only necessary for function-based getters/setters that require an extra parameter like getAttribute("width") and setAttribute("width", value). In this example, funcParam would be "width". Used by AttrPlugin for example.
+			_addPropTween = function(target, prop, start, end, overwriteProp, mod, funcParam, stringFilter, index) {
+				if (typeof(end) === "function") {
+					end = end(index || 0, target);
+				}
+				var type = typeof(target[prop]),
+					getterName = (type !== "function") ? "" : ((prop.indexOf("set") || typeof(target["get" + prop.substr(3)]) !== "function") ? prop : "get" + prop.substr(3)),
+					s = (start !== "get") ? start : !getterName ? target[prop] : funcParam ? target[getterName](funcParam) : target[getterName](),
+					isRelative = (typeof(end) === "string" && end.charAt(1) === "="),
+					pt = {t:target, p:prop, s:s, f:(type === "function"), pg:0, n:overwriteProp || prop, m:(!mod ? 0 : (typeof(mod) === "function") ? mod : Math.round), pr:0, c:isRelative ? parseInt(end.charAt(0) + "1", 10) * parseFloat(end.substr(2)) : (parseFloat(end) - s) || 0},
+					blob;
+
+				if (typeof(s) !== "number" || (typeof(end) !== "number" && !isRelative)) {
+					if (funcParam || isNaN(s) || (!isRelative && isNaN(end)) || typeof(s) === "boolean" || typeof(end) === "boolean") {
+						//a blob (string that has multiple numbers in it)
+						pt.fp = funcParam;
+						blob = _blobDif(s, (isRelative ? (parseFloat(pt.s) + pt.c) + (pt.s + "").replace(/[0-9\-\.]/g, "") : end), stringFilter || TweenLite.defaultStringFilter, pt);
+						pt = {t: blob, p: "setRatio", s: 0, c: 1, f: 2, pg: 0, n: overwriteProp || prop, pr: 0, m: 0}; //"2" indicates it's a Blob property tween. Needed for RoundPropsPlugin for example.
+					} else {
+						pt.s = parseFloat(s);
+						if (!isRelative) {
+							pt.c = (parseFloat(end) - pt.s) || 0;
+						}
+					}
+				}
+				if (pt.c) { //only add it to the linked list if there's a change.
+					if ((pt._next = this._firstPT)) {
+						pt._next._prev = pt;
+					}
+					this._firstPT = pt;
+					return pt;
+				}
+			},
+			_internals = TweenLite._internals = {isArray:_isArray, isSelector:_isSelector, lazyTweens:_lazyTweens, blobDif:_blobDif}, //gives us a way to expose certain private values to other GreenSock classes without contaminating tha main TweenLite object.
+			_plugins = TweenLite._plugins = {},
+			_tweenLookup = _internals.tweenLookup = {},
+			_tweenLookupNum = 0,
+			_reservedProps = _internals.reservedProps = {ease:1, delay:1, overwrite:1, onComplete:1, onCompleteParams:1, onCompleteScope:1, useFrames:1, runBackwards:1, startAt:1, onUpdate:1, onUpdateParams:1, onUpdateScope:1, onStart:1, onStartParams:1, onStartScope:1, onReverseComplete:1, onReverseCompleteParams:1, onReverseCompleteScope:1, onRepeat:1, onRepeatParams:1, onRepeatScope:1, easeParams:1, yoyo:1, immediateRender:1, repeat:1, repeatDelay:1, data:1, paused:1, reversed:1, autoCSS:1, lazy:1, onOverwrite:1, callbackScope:1, stringFilter:1, id:1, yoyoEase:1},
+			_overwriteLookup = {none:0, all:1, auto:2, concurrent:3, allOnStart:4, preexisting:5, "true":1, "false":0},
+			_rootFramesTimeline = Animation._rootFramesTimeline = new SimpleTimeline(),
+			_rootTimeline = Animation._rootTimeline = new SimpleTimeline(),
+			_nextGCFrame = 30,
+			_lazyRender = _internals.lazyRender = function() {
+				var i = _lazyTweens.length,
+					tween;
+				_lazyLookup = {};
+				while (--i > -1) {
+					tween = _lazyTweens[i];
+					if (tween && tween._lazy !== false) {
+						tween.render(tween._lazy[0], tween._lazy[1], true);
+						tween._lazy = false;
+					}
+				}
+				_lazyTweens.length = 0;
+			};
+
+		_rootTimeline._startTime = _ticker.time;
+		_rootFramesTimeline._startTime = _ticker.frame;
+		_rootTimeline._active = _rootFramesTimeline._active = true;
+		setTimeout(_lazyRender, 1); //on some mobile devices, there isn't a "tick" before code runs which means any lazy renders wouldn't run before the next official "tick".
+
+		Animation._updateRoot = TweenLite.render = function() {
+				var i, a, p;
+				if (_lazyTweens.length) { //if code is run outside of the requestAnimationFrame loop, there may be tweens queued AFTER the engine refreshed, so we need to ensure any pending renders occur before we refresh again.
+					_lazyRender();
+				}
+				_rootTimeline.render((_ticker.time - _rootTimeline._startTime) * _rootTimeline._timeScale, false, false);
+				_rootFramesTimeline.render((_ticker.frame - _rootFramesTimeline._startTime) * _rootFramesTimeline._timeScale, false, false);
+				if (_lazyTweens.length) {
+					_lazyRender();
+				}
+				if (_ticker.frame >= _nextGCFrame) { //dump garbage every 120 frames or whatever the user sets TweenLite.autoSleep to
+					_nextGCFrame = _ticker.frame + (parseInt(TweenLite.autoSleep, 10) || 120);
+					for (p in _tweenLookup) {
+						a = _tweenLookup[p].tweens;
+						i = a.length;
+						while (--i > -1) {
+							if (a[i]._gc) {
+								a.splice(i, 1);
+							}
+						}
+						if (a.length === 0) {
+							delete _tweenLookup[p];
+						}
+					}
+					//if there are no more tweens in the root timelines, or if they're all paused, make the _timer sleep to reduce load on the CPU slightly
+					p = _rootTimeline._first;
+					if (!p || p._paused) if (TweenLite.autoSleep && !_rootFramesTimeline._first && _ticker._listeners.tick.length === 1) {
+						while (p && p._paused) {
+							p = p._next;
+						}
+						if (!p) {
+							_ticker.sleep();
+						}
+					}
+				}
+			};
+
+		_ticker.addEventListener("tick", Animation._updateRoot);
+
+		var _register = function(target, tween, scrub) {
+				var id = target._gsTweenID, a, i;
+				if (!_tweenLookup[id || (target._gsTweenID = id = "t" + (_tweenLookupNum++))]) {
+					_tweenLookup[id] = {target:target, tweens:[]};
+				}
+				if (tween) {
+					a = _tweenLookup[id].tweens;
+					a[(i = a.length)] = tween;
+					if (scrub) {
+						while (--i > -1) {
+							if (a[i] === tween) {
+								a.splice(i, 1);
+							}
+						}
+					}
+				}
+				return _tweenLookup[id].tweens;
+			},
+			_onOverwrite = function(overwrittenTween, overwritingTween, target, killedProps) {
+				var func = overwrittenTween.vars.onOverwrite, r1, r2;
+				if (func) {
+					r1 = func(overwrittenTween, overwritingTween, target, killedProps);
+				}
+				func = TweenLite.onOverwrite;
+				if (func) {
+					r2 = func(overwrittenTween, overwritingTween, target, killedProps);
+				}
+				return (r1 !== false && r2 !== false);
+			},
+			_applyOverwrite = function(target, tween, props, mode, siblings) {
+				var i, changed, curTween, l;
+				if (mode === 1 || mode >= 4) {
+					l = siblings.length;
+					for (i = 0; i < l; i++) {
+						if ((curTween = siblings[i]) !== tween) {
+							if (!curTween._gc) {
+								if (curTween._kill(null, target, tween)) {
+									changed = true;
+								}
+							}
+						} else if (mode === 5) {
+							break;
+						}
+					}
+					return changed;
+				}
+				//NOTE: Add 0.0000000001 to overcome floating point errors that can cause the startTime to be VERY slightly off (when a tween's time() is set for example)
+				var startTime = tween._startTime + _tinyNum,
+					overlaps = [],
+					oCount = 0,
+					zeroDur = (tween._duration === 0),
+					globalStart;
+				i = siblings.length;
+				while (--i > -1) {
+					if ((curTween = siblings[i]) === tween || curTween._gc || curTween._paused) {
+						//ignore
+					} else if (curTween._timeline !== tween._timeline) {
+						globalStart = globalStart || _checkOverlap(tween, 0, zeroDur);
+						if (_checkOverlap(curTween, globalStart, zeroDur) === 0) {
+							overlaps[oCount++] = curTween;
+						}
+					} else if (curTween._startTime <= startTime) if (curTween._startTime + curTween.totalDuration() / curTween._timeScale > startTime) if (!((zeroDur || !curTween._initted) && startTime - curTween._startTime <= 0.0000000002)) {
+						overlaps[oCount++] = curTween;
+					}
+				}
+
+				i = oCount;
+				while (--i > -1) {
+					curTween = overlaps[i];
+					l = curTween._firstPT; //we need to discern if there were property tweens originally; if they all get removed in the next line's _kill() call, the tween should be killed. See https://github.com/greensock/GreenSock-JS/issues/278
+					if (mode === 2) if (curTween._kill(props, target, tween)) {
+						changed = true;
+					}
+					if (mode !== 2 || (!curTween._firstPT && curTween._initted && l)) {
+						if (mode !== 2 && !_onOverwrite(curTween, tween)) {
+							continue;
+						}
+						if (curTween._enabled(false, false)) { //if all property tweens have been overwritten, kill the tween.
+							changed = true;
+						}
+					}
+				}
+				return changed;
+			},
+			_checkOverlap = function(tween, reference, zeroDur) {
+				var tl = tween._timeline,
+					ts = tl._timeScale,
+					t = tween._startTime;
+				while (tl._timeline) {
+					t += tl._startTime;
+					ts *= tl._timeScale;
+					if (tl._paused) {
+						return -100;
+					}
+					tl = tl._timeline;
+				}
+				t /= ts;
+				return (t > reference) ? t - reference : ((zeroDur && t === reference) || (!tween._initted && t - reference < 2 * _tinyNum)) ? _tinyNum : ((t += tween.totalDuration() / tween._timeScale / ts) > reference + _tinyNum) ? 0 : t - reference - _tinyNum;
+			};
+
+
+//---- TweenLite instance methods -----------------------------------------------------------------------------
+
+		p._init = function() {
+			var v = this.vars,
+				op = this._overwrittenProps,
+				dur = this._duration,
+				immediate = !!v.immediateRender,
+				ease = v.ease,
+				i, initPlugins, pt, p, startVars, l;
+			if (v.startAt) {
+				if (this._startAt) {
+					this._startAt.render(-1, true); //if we've run a startAt previously (when the tween instantiated), we should revert it so that the values re-instantiate correctly particularly for relative tweens. Without this, a TweenLite.fromTo(obj, 1, {x:"+=100"}, {x:"-=100"}), for example, would actually jump to +=200 because the startAt would run twice, doubling the relative change.
+					this._startAt.kill();
+				}
+				startVars = {};
+				for (p in v.startAt) { //copy the properties/values into a new object to avoid collisions, like var to = {x:0}, from = {x:500}; timeline.fromTo(e, 1, from, to).fromTo(e, 1, to, from);
+					startVars[p] = v.startAt[p];
+				}
+				startVars.data = "isStart";
+				startVars.overwrite = false;
+				startVars.immediateRender = true;
+				startVars.lazy = (immediate && v.lazy !== false);
+				startVars.startAt = startVars.delay = null; //no nesting of startAt objects allowed (otherwise it could cause an infinite loop).
+				startVars.onUpdate = v.onUpdate;
+				startVars.onUpdateParams = v.onUpdateParams;
+				startVars.onUpdateScope = v.onUpdateScope || v.callbackScope || this;
+				this._startAt = TweenLite.to(this.target || {}, 0, startVars);
+				if (immediate) {
+					if (this._time > 0) {
+						this._startAt = null; //tweens that render immediately (like most from() and fromTo() tweens) shouldn't revert when their parent timeline's playhead goes backward past the startTime because the initial render could have happened anytime and it shouldn't be directly correlated to this tween's startTime. Imagine setting up a complex animation where the beginning states of various objects are rendered immediately but the tween doesn't happen for quite some time - if we revert to the starting values as soon as the playhead goes backward past the tween's startTime, it will throw things off visually. Reversion should only happen in TimelineLite/Max instances where immediateRender was false (which is the default in the convenience methods like from()).
+					} else if (dur !== 0) {
+						return; //we skip initialization here so that overwriting doesn't occur until the tween actually begins. Otherwise, if you create several immediateRender:true tweens of the same target/properties to drop into a TimelineLite or TimelineMax, the last one created would overwrite the first ones because they didn't get placed into the timeline yet before the first render occurs and kicks in overwriting.
+					}
+				}
+			} else if (v.runBackwards && dur !== 0) {
+				//from() tweens must be handled uniquely: their beginning values must be rendered but we don't want overwriting to occur yet (when time is still 0). Wait until the tween actually begins before doing all the routines like overwriting. At that time, we should render at the END of the tween to ensure that things initialize correctly (remember, from() tweens go backwards)
+				if (this._startAt) {
+					this._startAt.render(-1, true);
+					this._startAt.kill();
+					this._startAt = null;
+				} else {
+					if (this._time !== 0) { //in rare cases (like if a from() tween runs and then is invalidate()-ed), immediateRender could be true but the initial forced-render gets skipped, so there's no need to force the render in this context when the _time is greater than 0
+						immediate = false;
+					}
+					pt = {};
+					for (p in v) { //copy props into a new object and skip any reserved props, otherwise onComplete or onUpdate or onStart could fire. We should, however, permit autoCSS to go through.
+						if (!_reservedProps[p] || p === "autoCSS") {
+							pt[p] = v[p];
+						}
+					}
+					pt.overwrite = 0;
+					pt.data = "isFromStart"; //we tag the tween with as "isFromStart" so that if [inside a plugin] we need to only do something at the very END of a tween, we have a way of identifying this tween as merely the one that's setting the beginning values for a "from()" tween. For example, clearProps in CSSPlugin should only get applied at the very END of a tween and without this tag, from(...{height:100, clearProps:"height", delay:1}) would wipe the height at the beginning of the tween and after 1 second, it'd kick back in.
+					pt.lazy = (immediate && v.lazy !== false);
+					pt.immediateRender = immediate; //zero-duration tweens render immediately by default, but if we're not specifically instructed to render this tween immediately, we should skip this and merely _init() to record the starting values (rendering them immediately would push them to completion which is wasteful in that case - we'd have to render(-1) immediately after)
+					this._startAt = TweenLite.to(this.target, 0, pt);
+					if (!immediate) {
+						this._startAt._init(); //ensures that the initial values are recorded
+						this._startAt._enabled(false); //no need to have the tween render on the next cycle. Disable it because we'll always manually control the renders of the _startAt tween.
+						if (this.vars.immediateRender) {
+							this._startAt = null;
+						}
+					} else if (this._time === 0) {
+						return;
+					}
+				}
+			}
+			this._ease = ease = (!ease) ? TweenLite.defaultEase : (ease instanceof Ease) ? ease : (typeof(ease) === "function") ? new Ease(ease, v.easeParams) : _easeMap[ease] || TweenLite.defaultEase;
+			if (v.easeParams instanceof Array && ease.config) {
+				this._ease = ease.config.apply(ease, v.easeParams);
+			}
+			this._easeType = this._ease._type;
+			this._easePower = this._ease._power;
+			this._firstPT = null;
+
+			if (this._targets) {
+				l = this._targets.length;
+				for (i = 0; i < l; i++) {
+					if ( this._initProps( this._targets[i], (this._propLookup[i] = {}), this._siblings[i], (op ? op[i] : null), i) ) {
+						initPlugins = true;
+					}
+				}
+			} else {
+				initPlugins = this._initProps(this.target, this._propLookup, this._siblings, op, 0);
+			}
+
+			if (initPlugins) {
+				TweenLite._onPluginEvent("_onInitAllProps", this); //reorders the array in order of priority. Uses a static TweenPlugin method in order to minimize file size in TweenLite
+			}
+			if (op) if (!this._firstPT) if (typeof(this.target) !== "function") { //if all tweening properties have been overwritten, kill the tween. If the target is a function, it's probably a delayedCall so let it live.
+				this._enabled(false, false);
+			}
+			if (v.runBackwards) {
+				pt = this._firstPT;
+				while (pt) {
+					pt.s += pt.c;
+					pt.c = -pt.c;
+					pt = pt._next;
+				}
+			}
+			this._onUpdate = v.onUpdate;
+			this._initted = true;
+		};
+
+		p._initProps = function(target, propLookup, siblings, overwrittenProps, index) {
+			var p, i, initPlugins, plugin, pt, v;
+			if (target == null) {
+				return false;
+			}
+
+			if (_lazyLookup[target._gsTweenID]) {
+				_lazyRender(); //if other tweens of the same target have recently initted but haven't rendered yet, we've got to force the render so that the starting values are correct (imagine populating a timeline with a bunch of sequential tweens and then jumping to the end)
+			}
+
+			if (!this.vars.css) if (target.style) if (target !== window && target.nodeType) if (_plugins.css) if (this.vars.autoCSS !== false) { //it's so common to use TweenLite/Max to animate the css of DOM elements, we assume that if the target is a DOM element, that's what is intended (a convenience so that users don't have to wrap things in css:{}, although we still recommend it for a slight performance boost and better specificity). Note: we cannot check "nodeType" on the window inside an iframe.
+				_autoCSS(this.vars, target);
+			}
+			for (p in this.vars) {
+				v = this.vars[p];
+				if (_reservedProps[p]) {
+					if (v) if ((v instanceof Array) || (v.push && _isArray(v))) if (v.join("").indexOf("{self}") !== -1) {
+						this.vars[p] = v = this._swapSelfInParams(v, this);
+					}
+
+				} else if (_plugins[p] && (plugin = new _plugins[p]())._onInitTween(target, this.vars[p], this, index)) {
+
+					//t - target 		[object]
+					//p - property 		[string]
+					//s - start			[number]
+					//c - change		[number]
+					//f - isFunction	[boolean]
+					//n - name			[string]
+					//pg - isPlugin 	[boolean]
+					//pr - priority		[number]
+					//m - mod           [function | 0]
+					this._firstPT = pt = {_next:this._firstPT, t:plugin, p:"setRatio", s:0, c:1, f:1, n:p, pg:1, pr:plugin._priority, m:0};
+					i = plugin._overwriteProps.length;
+					while (--i > -1) {
+						propLookup[plugin._overwriteProps[i]] = this._firstPT;
+					}
+					if (plugin._priority || plugin._onInitAllProps) {
+						initPlugins = true;
+					}
+					if (plugin._onDisable || plugin._onEnable) {
+						this._notifyPluginsOfEnabled = true;
+					}
+					if (pt._next) {
+						pt._next._prev = pt;
+					}
+
+				} else {
+					propLookup[p] = _addPropTween.call(this, target, p, "get", v, p, 0, null, this.vars.stringFilter, index);
+				}
+			}
+
+			if (overwrittenProps) if (this._kill(overwrittenProps, target)) { //another tween may have tried to overwrite properties of this tween before init() was called (like if two tweens start at the same time, the one created second will run first)
+				return this._initProps(target, propLookup, siblings, overwrittenProps, index);
+			}
+			if (this._overwrite > 1) if (this._firstPT) if (siblings.length > 1) if (_applyOverwrite(target, this, propLookup, this._overwrite, siblings)) {
+				this._kill(propLookup, target);
+				return this._initProps(target, propLookup, siblings, overwrittenProps, index);
+			}
+			if (this._firstPT) if ((this.vars.lazy !== false && this._duration) || (this.vars.lazy && !this._duration)) { //zero duration tweens don't lazy render by default; everything else does.
+				_lazyLookup[target._gsTweenID] = true;
+			}
+			return initPlugins;
+		};
+
+		p.render = function(time, suppressEvents, force) {
+			var prevTime = this._time,
+				duration = this._duration,
+				prevRawPrevTime = this._rawPrevTime,
+				isComplete, callback, pt, rawPrevTime;
+			if (time >= duration - 0.0000001 && time >= 0) { //to work around occasional floating point math artifacts.
+				this._totalTime = this._time = duration;
+				this.ratio = this._ease._calcEnd ? this._ease.getRatio(1) : 1;
+				if (!this._reversed ) {
+					isComplete = true;
+					callback = "onComplete";
+					force = (force || this._timeline.autoRemoveChildren); //otherwise, if the animation is unpaused/activated after it's already finished, it doesn't get removed from the parent timeline.
+				}
+				if (duration === 0) if (this._initted || !this.vars.lazy || force) { //zero-duration tweens are tricky because we must discern the momentum/direction of time in order to determine whether the starting values should be rendered or the ending values. If the "playhead" of its timeline goes past the zero-duration tween in the forward direction or lands directly on it, the end values should be rendered, but if the timeline's "playhead" moves past it in the backward direction (from a postitive time to a negative time), the starting values must be rendered.
+					if (this._startTime === this._timeline._duration) { //if a zero-duration tween is at the VERY end of a timeline and that timeline renders at its end, it will typically add a tiny bit of cushion to the render time to prevent rounding errors from getting in the way of tweens rendering their VERY end. If we then reverse() that timeline, the zero-duration tween will trigger its onReverseComplete even though technically the playhead didn't pass over it again. It's a very specific edge case we must accommodate.
+						time = 0;
+					}
+					if (prevRawPrevTime < 0 || (time <= 0 && time >= -0.0000001) || (prevRawPrevTime === _tinyNum && this.data !== "isPause")) if (prevRawPrevTime !== time) { //note: when this.data is "isPause", it's a callback added by addPause() on a timeline that we should not be triggered when LEAVING its exact start time. In other words, tl.addPause(1).play(1) shouldn't pause.
+						force = true;
+						if (prevRawPrevTime > _tinyNum) {
+							callback = "onReverseComplete";
+						}
+					}
+					this._rawPrevTime = rawPrevTime = (!suppressEvents || time || prevRawPrevTime === time) ? time : _tinyNum; //when the playhead arrives at EXACTLY time 0 (right on top) of a zero-duration tween, we need to discern if events are suppressed so that when the playhead moves again (next time), it'll trigger the callback. If events are NOT suppressed, obviously the callback would be triggered in this render. Basically, the callback should fire either when the playhead ARRIVES or LEAVES this exact spot, not both. Imagine doing a timeline.seek(0) and there's a callback that sits at 0. Since events are suppressed on that seek() by default, nothing will fire, but when the playhead moves off of that position, the callback should fire. This behavior is what people intuitively expect. We set the _rawPrevTime to be a precise tiny number to indicate this scenario rather than using another property/variable which would increase memory usage. This technique is less readable, but more efficient.
+				}
+
+			} else if (time < 0.0000001) { //to work around occasional floating point math artifacts, round super small values to 0.
+				this._totalTime = this._time = 0;
+				this.ratio = this._ease._calcEnd ? this._ease.getRatio(0) : 0;
+				if (prevTime !== 0 || (duration === 0 && prevRawPrevTime > 0)) {
+					callback = "onReverseComplete";
+					isComplete = this._reversed;
+				}
+				if (time < 0) {
+					this._active = false;
+					if (duration === 0) if (this._initted || !this.vars.lazy || force) { //zero-duration tweens are tricky because we must discern the momentum/direction of time in order to determine whether the starting values should be rendered or the ending values. If the "playhead" of its timeline goes past the zero-duration tween in the forward direction or lands directly on it, the end values should be rendered, but if the timeline's "playhead" moves past it in the backward direction (from a postitive time to a negative time), the starting values must be rendered.
+						if (prevRawPrevTime >= 0 && !(prevRawPrevTime === _tinyNum && this.data === "isPause")) {
+							force = true;
+						}
+						this._rawPrevTime = rawPrevTime = (!suppressEvents || time || prevRawPrevTime === time) ? time : _tinyNum; //when the playhead arrives at EXACTLY time 0 (right on top) of a zero-duration tween, we need to discern if events are suppressed so that when the playhead moves again (next time), it'll trigger the callback. If events are NOT suppressed, obviously the callback would be triggered in this render. Basically, the callback should fire either when the playhead ARRIVES or LEAVES this exact spot, not both. Imagine doing a timeline.seek(0) and there's a callback that sits at 0. Since events are suppressed on that seek() by default, nothing will fire, but when the playhead moves off of that position, the callback should fire. This behavior is what people intuitively expect. We set the _rawPrevTime to be a precise tiny number to indicate this scenario rather than using another property/variable which would increase memory usage. This technique is less readable, but more efficient.
+					}
+				}
+				if (!this._initted || (this._startAt && this._startAt.progress())) { //if we render the very beginning (time == 0) of a fromTo(), we must force the render (normal tweens wouldn't need to render at a time of 0 when the prevTime was also 0). This is also mandatory to make sure overwriting kicks in immediately. Also, we check progress() because if startAt has already rendered at its end, we should force a render at its beginning. Otherwise, if you put the playhead directly on top of where a fromTo({immediateRender:false}) starts, and then move it backwards, the from() won't revert its values.
+					force = true;
+				}
+			} else {
+				this._totalTime = this._time = time;
+
+				if (this._easeType) {
+					var r = time / duration, type = this._easeType, pow = this._easePower;
+					if (type === 1 || (type === 3 && r >= 0.5)) {
+						r = 1 - r;
+					}
+					if (type === 3) {
+						r *= 2;
+					}
+					if (pow === 1) {
+						r *= r;
+					} else if (pow === 2) {
+						r *= r * r;
+					} else if (pow === 3) {
+						r *= r * r * r;
+					} else if (pow === 4) {
+						r *= r * r * r * r;
+					}
+
+					if (type === 1) {
+						this.ratio = 1 - r;
+					} else if (type === 2) {
+						this.ratio = r;
+					} else if (time / duration < 0.5) {
+						this.ratio = r / 2;
+					} else {
+						this.ratio = 1 - (r / 2);
+					}
+
+				} else {
+					this.ratio = this._ease.getRatio(time / duration);
+				}
+			}
+
+			if (this._time === prevTime && !force) {
+				return;
+			} else if (!this._initted) {
+				this._init();
+				if (!this._initted || this._gc) { //immediateRender tweens typically won't initialize until the playhead advances (_time is greater than 0) in order to ensure that overwriting occurs properly. Also, if all of the tweening properties have been overwritten (which would cause _gc to be true, as set in _init()), we shouldn't continue otherwise an onStart callback could be called for example.
+					return;
+				} else if (!force && this._firstPT && ((this.vars.lazy !== false && this._duration) || (this.vars.lazy && !this._duration))) {
+					this._time = this._totalTime = prevTime;
+					this._rawPrevTime = prevRawPrevTime;
+					_lazyTweens.push(this);
+					this._lazy = [time, suppressEvents];
+					return;
+				}
+				//_ease is initially set to defaultEase, so now that init() has run, _ease is set properly and we need to recalculate the ratio. Overall this is faster than using conditional logic earlier in the method to avoid having to set ratio twice because we only init() once but renderTime() gets called VERY frequently.
+				if (this._time && !isComplete) {
+					this.ratio = this._ease.getRatio(this._time / duration);
+				} else if (isComplete && this._ease._calcEnd) {
+					this.ratio = this._ease.getRatio((this._time === 0) ? 0 : 1);
+				}
+			}
+			if (this._lazy !== false) { //in case a lazy render is pending, we should flush it because the new render is occurring now (imagine a lazy tween instantiating and then immediately the user calls tween.seek(tween.duration()), skipping to the end - the end render would be forced, and then if we didn't flush the lazy render, it'd fire AFTER the seek(), rendering it at the wrong time.
+				this._lazy = false;
+			}
+			if (!this._active) if (!this._paused && this._time !== prevTime && time >= 0) {
+				this._active = true;  //so that if the user renders a tween (as opposed to the timeline rendering it), the timeline is forced to re-render and align it with the proper time/frame on the next rendering cycle. Maybe the tween already finished but the user manually re-renders it as halfway done.
+			}
+			if (prevTime === 0) {
+				if (this._startAt) {
+					if (time >= 0) {
+						this._startAt.render(time, true, force);
+					} else if (!callback) {
+						callback = "_dummyGS"; //if no callback is defined, use a dummy value just so that the condition at the end evaluates as true because _startAt should render AFTER the normal render loop when the time is negative. We could handle this in a more intuitive way, of course, but the render loop is the MOST important thing to optimize, so this technique allows us to avoid adding extra conditional logic in a high-frequency area.
+					}
+				}
+				if (this.vars.onStart) if (this._time !== 0 || duration === 0) if (!suppressEvents) {
+					this._callback("onStart");
+				}
+			}
+			pt = this._firstPT;
+			while (pt) {
+				if (pt.f) {
+					pt.t[pt.p](pt.c * this.ratio + pt.s);
+				} else {
+					pt.t[pt.p] = pt.c * this.ratio + pt.s;
+				}
+				pt = pt._next;
+			}
+
+			if (this._onUpdate) {
+				if (time < 0) if (this._startAt && time !== -0.0001) { //if the tween is positioned at the VERY beginning (_startTime 0) of its parent timeline, it's illegal for the playhead to go back further, so we should not render the recorded startAt values.
+					this._startAt.render(time, true, force); //note: for performance reasons, we tuck this conditional logic inside less traveled areas (most tweens don't have an onUpdate). We'd just have it at the end before the onComplete, but the values should be updated before any onUpdate is called, so we ALSO put it here and then if it's not called, we do so later near the onComplete.
+				}
+				if (!suppressEvents) if (this._time !== prevTime || isComplete || force) {
+					this._callback("onUpdate");
+				}
+			}
+			if (callback) if (!this._gc || force) { //check _gc because there's a chance that kill() could be called in an onUpdate
+				if (time < 0 && this._startAt && !this._onUpdate && time !== -0.0001) { //-0.0001 is a special value that we use when looping back to the beginning of a repeated TimelineMax, in which case we shouldn't render the _startAt values.
+					this._startAt.render(time, true, force);
+				}
+				if (isComplete) {
+					if (this._timeline.autoRemoveChildren) {
+						this._enabled(false, false);
+					}
+					this._active = false;
+				}
+				if (!suppressEvents && this.vars[callback]) {
+					this._callback(callback);
+				}
+				if (duration === 0 && this._rawPrevTime === _tinyNum && rawPrevTime !== _tinyNum) { //the onComplete or onReverseComplete could trigger movement of the playhead and for zero-duration tweens (which must discern direction) that land directly back on their start time, we don't want to fire again on the next render. Think of several addPause()'s in a timeline that forces the playhead to a certain spot, but what if it's already paused and another tween is tweening the "time" of the timeline? Each time it moves [forward] past that spot, it would move back, and since suppressEvents is true, it'd reset _rawPrevTime to _tinyNum so that when it begins again, the callback would fire (so ultimately it could bounce back and forth during that tween). Again, this is a very uncommon scenario, but possible nonetheless.
+					this._rawPrevTime = 0;
+				}
+			}
+		};
+
+		p._kill = function(vars, target, overwritingTween) {
+			if (vars === "all") {
+				vars = null;
+			}
+			if (vars == null) if (target == null || target === this.target) {
+				this._lazy = false;
+				return this._enabled(false, false);
+			}
+			target = (typeof(target) !== "string") ? (target || this._targets || this.target) : TweenLite.selector(target) || target;
+			var simultaneousOverwrite = (overwritingTween && this._time && overwritingTween._startTime === this._startTime && this._timeline === overwritingTween._timeline),
+				firstPT = this._firstPT,
+				i, overwrittenProps, p, pt, propLookup, changed, killProps, record, killed;
+			if ((_isArray(target) || _isSelector(target)) && typeof(target[0]) !== "number") {
+				i = target.length;
+				while (--i > -1) {
+					if (this._kill(vars, target[i], overwritingTween)) {
+						changed = true;
+					}
+				}
+			} else {
+				if (this._targets) {
+					i = this._targets.length;
+					while (--i > -1) {
+						if (target === this._targets[i]) {
+							propLookup = this._propLookup[i] || {};
+							this._overwrittenProps = this._overwrittenProps || [];
+							overwrittenProps = this._overwrittenProps[i] = vars ? this._overwrittenProps[i] || {} : "all";
+							break;
+						}
+					}
+				} else if (target !== this.target) {
+					return false;
+				} else {
+					propLookup = this._propLookup;
+					overwrittenProps = this._overwrittenProps = vars ? this._overwrittenProps || {} : "all";
+				}
+
+				if (propLookup) {
+					killProps = vars || propLookup;
+					record = (vars !== overwrittenProps && overwrittenProps !== "all" && vars !== propLookup && (typeof(vars) !== "object" || !vars._tempKill)); //_tempKill is a super-secret way to delete a particular tweening property but NOT have it remembered as an official overwritten property (like in BezierPlugin)
+					if (overwritingTween && (TweenLite.onOverwrite || this.vars.onOverwrite)) {
+						for (p in killProps) {
+							if (propLookup[p]) {
+								if (!killed) {
+									killed = [];
+								}
+								killed.push(p);
+							}
+						}
+						if ((killed || !vars) && !_onOverwrite(this, overwritingTween, target, killed)) { //if the onOverwrite returned false, that means the user wants to override the overwriting (cancel it).
+							return false;
+						}
+					}
+
+					for (p in killProps) {
+						if ((pt = propLookup[p])) {
+							if (simultaneousOverwrite) { //if another tween overwrites this one and they both start at exactly the same time, yet this tween has already rendered once (for example, at 0.001) because it's first in the queue, we should revert the values to where they were at 0 so that the starting values aren't contaminated on the overwriting tween.
+								if (pt.f) {
+									pt.t[pt.p](pt.s);
+								} else {
+									pt.t[pt.p] = pt.s;
+								}
+								changed = true;
+							}
+							if (pt.pg && pt.t._kill(killProps)) {
+								changed = true; //some plugins need to be notified so they can perform cleanup tasks first
+							}
+							if (!pt.pg || pt.t._overwriteProps.length === 0) {
+								if (pt._prev) {
+									pt._prev._next = pt._next;
+								} else if (pt === this._firstPT) {
+									this._firstPT = pt._next;
+								}
+								if (pt._next) {
+									pt._next._prev = pt._prev;
+								}
+								pt._next = pt._prev = null;
+							}
+							delete propLookup[p];
+						}
+						if (record) {
+							overwrittenProps[p] = 1;
+						}
+					}
+					if (!this._firstPT && this._initted && firstPT) { //if all tweening properties are killed, kill the tween. Without this line, if there's a tween with multiple targets and then you killTweensOf() each target individually, the tween would technically still remain active and fire its onComplete even though there aren't any more properties tweening.
+						this._enabled(false, false);
+					}
+				}
+			}
+			return changed;
+		};
+
+		p.invalidate = function() {
+			if (this._notifyPluginsOfEnabled) {
+				TweenLite._onPluginEvent("_onDisable", this);
+			}
+			this._firstPT = this._overwrittenProps = this._startAt = this._onUpdate = null;
+			this._notifyPluginsOfEnabled = this._active = this._lazy = false;
+			this._propLookup = (this._targets) ? {} : [];
+			Animation.prototype.invalidate.call(this);
+			if (this.vars.immediateRender) {
+				this._time = -_tinyNum; //forces a render without having to set the render() "force" parameter to true because we want to allow lazying by default (using the "force" parameter always forces an immediate full render)
+				this.render(Math.min(0, -this._delay)); //in case delay is negative.
+			}
+			return this;
+		};
+
+		p._enabled = function(enabled, ignoreTimeline) {
+			if (!_tickerActive) {
+				_ticker.wake();
+			}
+			if (enabled && this._gc) {
+				var targets = this._targets,
+					i;
+				if (targets) {
+					i = targets.length;
+					while (--i > -1) {
+						this._siblings[i] = _register(targets[i], this, true);
+					}
+				} else {
+					this._siblings = _register(this.target, this, true);
+				}
+			}
+			Animation.prototype._enabled.call(this, enabled, ignoreTimeline);
+			if (this._notifyPluginsOfEnabled) if (this._firstPT) {
+				return TweenLite._onPluginEvent((enabled ? "_onEnable" : "_onDisable"), this);
+			}
+			return false;
+		};
+
+
+//----TweenLite static methods -----------------------------------------------------
+
+		TweenLite.to = function(target, duration, vars) {
+			return new TweenLite(target, duration, vars);
+		};
+
+		TweenLite.from = function(target, duration, vars) {
+			vars.runBackwards = true;
+			vars.immediateRender = (vars.immediateRender != false);
+			return new TweenLite(target, duration, vars);
+		};
+
+		TweenLite.fromTo = function(target, duration, fromVars, toVars) {
+			toVars.startAt = fromVars;
+			toVars.immediateRender = (toVars.immediateRender != false && fromVars.immediateRender != false);
+			return new TweenLite(target, duration, toVars);
+		};
+
+		TweenLite.delayedCall = function(delay, callback, params, scope, useFrames) {
+			return new TweenLite(callback, 0, {delay:delay, onComplete:callback, onCompleteParams:params, callbackScope:scope, onReverseComplete:callback, onReverseCompleteParams:params, immediateRender:false, lazy:false, useFrames:useFrames, overwrite:0});
+		};
+
+		TweenLite.set = function(target, vars) {
+			return new TweenLite(target, 0, vars);
+		};
+
+		TweenLite.getTweensOf = function(target, onlyActive) {
+			if (target == null) { return []; }
+			target = (typeof(target) !== "string") ? target : TweenLite.selector(target) || target;
+			var i, a, j, t;
+			if ((_isArray(target) || _isSelector(target)) && typeof(target[0]) !== "number") {
+				i = target.length;
+				a = [];
+				while (--i > -1) {
+					a = a.concat(TweenLite.getTweensOf(target[i], onlyActive));
+				}
+				i = a.length;
+				//now get rid of any duplicates (tweens of arrays of objects could cause duplicates)
+				while (--i > -1) {
+					t = a[i];
+					j = i;
+					while (--j > -1) {
+						if (t === a[j]) {
+							a.splice(i, 1);
+						}
+					}
+				}
+			} else if (target._gsTweenID) {
+				a = _register(target).concat();
+				i = a.length;
+				while (--i > -1) {
+					if (a[i]._gc || (onlyActive && !a[i].isActive())) {
+						a.splice(i, 1);
+					}
+				}
+			}
+			return a || [];
+		};
+
+		TweenLite.killTweensOf = TweenLite.killDelayedCallsTo = function(target, onlyActive, vars) {
+			if (typeof(onlyActive) === "object") {
+				vars = onlyActive; //for backwards compatibility (before "onlyActive" parameter was inserted)
+				onlyActive = false;
+			}
+			var a = TweenLite.getTweensOf(target, onlyActive),
+				i = a.length;
+			while (--i > -1) {
+				a[i]._kill(vars, target);
+			}
+		};
+
+
+
+/*
+ * ----------------------------------------------------------------
+ * TweenPlugin   (could easily be split out as a separate file/class, but included for ease of use (so that people don't need to include another script call before loading plugins which is easy to forget)
+ * ----------------------------------------------------------------
+ */
+		var TweenPlugin = _class("plugins.TweenPlugin", function(props, priority) {
+					this._overwriteProps = (props || "").split(",");
+					this._propName = this._overwriteProps[0];
+					this._priority = priority || 0;
+					this._super = TweenPlugin.prototype;
+				}, true);
+
+		p = TweenPlugin.prototype;
+		TweenPlugin.version = "1.19.0";
+		TweenPlugin.API = 2;
+		p._firstPT = null;
+		p._addTween = _addPropTween;
+		p.setRatio = _setRatio;
+
+		p._kill = function(lookup) {
+			var a = this._overwriteProps,
+				pt = this._firstPT,
+				i;
+			if (lookup[this._propName] != null) {
+				this._overwriteProps = [];
+			} else {
+				i = a.length;
+				while (--i > -1) {
+					if (lookup[a[i]] != null) {
+						a.splice(i, 1);
+					}
+				}
+			}
+			while (pt) {
+				if (lookup[pt.n] != null) {
+					if (pt._next) {
+						pt._next._prev = pt._prev;
+					}
+					if (pt._prev) {
+						pt._prev._next = pt._next;
+						pt._prev = null;
+					} else if (this._firstPT === pt) {
+						this._firstPT = pt._next;
+					}
+				}
+				pt = pt._next;
+			}
+			return false;
+		};
+
+		p._mod = p._roundProps = function(lookup) {
+			var pt = this._firstPT,
+				val;
+			while (pt) {
+				val = lookup[this._propName] || (pt.n != null && lookup[ pt.n.split(this._propName + "_").join("") ]);
+				if (val && typeof(val) === "function") { //some properties that are very plugin-specific add a prefix named after the _propName plus an underscore, so we need to ignore that extra stuff here.
+					if (pt.f === 2) {
+						pt.t._applyPT.m = val;
+					} else {
+						pt.m = val;
+					}
+				}
+				pt = pt._next;
+			}
+		};
+
+		TweenLite._onPluginEvent = function(type, tween) {
+			var pt = tween._firstPT,
+				changed, pt2, first, last, next;
+			if (type === "_onInitAllProps") {
+				//sorts the PropTween linked list in order of priority because some plugins need to render earlier/later than others, like MotionBlurPlugin applies its effects after all x/y/alpha tweens have rendered on each frame.
+				while (pt) {
+					next = pt._next;
+					pt2 = first;
+					while (pt2 && pt2.pr > pt.pr) {
+						pt2 = pt2._next;
+					}
+					if ((pt._prev = pt2 ? pt2._prev : last)) {
+						pt._prev._next = pt;
+					} else {
+						first = pt;
+					}
+					if ((pt._next = pt2)) {
+						pt2._prev = pt;
+					} else {
+						last = pt;
+					}
+					pt = next;
+				}
+				pt = tween._firstPT = first;
+			}
+			while (pt) {
+				if (pt.pg) if (typeof(pt.t[type]) === "function") if (pt.t[type]()) {
+					changed = true;
+				}
+				pt = pt._next;
+			}
+			return changed;
+		};
+
+		TweenPlugin.activate = function(plugins) {
+			var i = plugins.length;
+			while (--i > -1) {
+				if (plugins[i].API === TweenPlugin.API) {
+					_plugins[(new plugins[i]())._propName] = plugins[i];
+				}
+			}
+			return true;
+		};
+
+		//provides a more concise way to define plugins that have no dependencies besides TweenPlugin and TweenLite, wrapping common boilerplate stuff into one function (added in 1.9.0). You don't NEED to use this to define a plugin - the old way still works and can be useful in certain (rare) situations.
+		_gsDefine.plugin = function(config) {
+			if (!config || !config.propName || !config.init || !config.API) { throw "illegal plugin definition."; }
+			var propName = config.propName,
+				priority = config.priority || 0,
+				overwriteProps = config.overwriteProps,
+				map = {init:"_onInitTween", set:"setRatio", kill:"_kill", round:"_mod", mod:"_mod", initAll:"_onInitAllProps"},
+				Plugin = _class("plugins." + propName.charAt(0).toUpperCase() + propName.substr(1) + "Plugin",
+					function() {
+						TweenPlugin.call(this, propName, priority);
+						this._overwriteProps = overwriteProps || [];
+					}, (config.global === true)),
+				p = Plugin.prototype = new TweenPlugin(propName),
+				prop;
+			p.constructor = Plugin;
+			Plugin.API = config.API;
+			for (prop in map) {
+				if (typeof(config[prop]) === "function") {
+					p[map[prop]] = config[prop];
+				}
+			}
+			Plugin.version = config.version;
+			TweenPlugin.activate([Plugin]);
+			return Plugin;
+		};
+
+
+		//now run through all the dependencies discovered and if any are missing, log that to the console as a warning. This is why it's best to have TweenLite load last - it can check all the dependencies for you.
+		a = window._gsQueue;
+		if (a) {
+			for (i = 0; i < a.length; i++) {
+				a[i]();
+			}
+			for (p in _defLookup) {
+				if (!_defLookup[p].func) {
+					window.console.log("GSAP encountered missing dependency: " + p);
+				}
+			}
+		}
+
+		_tickerActive = false; //ensures that the first official animation forces a ticker.tick() to update the time when it is instantiated
+
+})((typeof(module) !== "undefined" && module.exports && typeof(global) !== "undefined") ? global : this || window, "TweenLite");
+}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],3:[function(require,module,exports){
+(function (global){
+/*!
  * VERSION: 2.0.2
  * DATE: 2018-08-27
  * UPDATES AND DOCS AT: http://greensock.com
@@ -8015,13 +10167,13 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 
 })((typeof(module) !== "undefined" && module.exports && typeof(global) !== "undefined") ? global : this || window, "TweenMax");
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],2:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 /*!
  * ScrollMagic v2.0.6 (2018-10-08)
  * The javascript library for magical scroll interactions.
  * (c) 2018 Jan Paepke (@janpaepke)
  * Project Website: http://scrollmagic.io
- * 
+ *
  * @version 2.0.6
  * @license Dual licensed under MIT license and GPL.
  * @author Jan Paepke - e-mail@janpaepke.de
@@ -8044,7 +10196,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 	}
 }(this, function () {
 	"use strict";
-
+    console.log("Sm");
 	var ScrollMagic = function () {
 		_util.log(2, '(COMPATIBILITY NOTICE) -> As of ScrollMagic 2.0.0 you need to use \'new ScrollMagic.Controller()\' to create a new controller instance. Use \'new ScrollMagic.Scene()\' to instance a scene.');
 	};
@@ -8078,8 +10230,8 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 	 ** `1` => errors
 	 ** `2` => errors, warnings
 	 ** `3` => errors, warnings, debuginfo
-	 * @param {boolean} [options.refreshInterval=100] - Some changes don't call events by default, like changing the container size or moving a scene trigger element.  
-	 This interval polls these parameters to fire the necessary events.  
+	 * @param {boolean} [options.refreshInterval=100] - Some changes don't call events by default, like changing the container size or moving a scene trigger element.
+	 This interval polls these parameters to fire the necessary events.
 	 If you don't use custom containers, trigger elements or have static layouts, where the positions of the trigger elements don't change, you can set this to 0 disable interval checking and improve performance.
 	 *
 	 */
@@ -8326,7 +10478,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 */
 
 		/**
-		 * Add one ore more scene(s) to the controller.  
+		 * Add one ore more scene(s) to the controller.
 		 * This is the equivalent to `Scene.addTo(controller)`.
 		 * @public
 		 * @example
@@ -8372,7 +10524,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		};
 
 		/**
-		 * Remove one ore more scene(s) from the controller.  
+		 * Remove one ore more scene(s) from the controller.
 		 * This is the equivalent to `Scene.remove()`.
 		 * @public
 		 * @example
@@ -8403,10 +10555,10 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		};
 
 		/**
-		 * Update one ore more scene(s) according to the scroll position of the container.  
-		 * This is the equivalent to `Scene.update()`.  
-		 * The update method calculates the scene's start and end position (based on the trigger element, trigger hook, duration and offset) and checks it against the current scroll position of the container.  
-		 * It then updates the current scene state accordingly (or does nothing, if the state is already correct) – Pins will be set to their correct position and tweens will be updated to their correct progress.  
+		 * Update one ore more scene(s) according to the scroll position of the container.
+		 * This is the equivalent to `Scene.update()`.
+		 * The update method calculates the scene's start and end position (based on the trigger element, trigger hook, duration and offset) and checks it against the current scroll position of the container.
+		 * It then updates the current scene state accordingly (or does nothing, if the state is already correct) – Pins will be set to their correct position and tweens will be updated to their correct progress.
 		 * _**Note:** This method gets called constantly whenever Controller detects a change. The only application for you is if you change something outside of the realm of ScrollMagic, like moving the trigger or changing tween parameters._
 		 * @public
 		 * @example
@@ -8420,7 +10572,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * controller.updateScene([scene1, scene2, scene3]);
 		 *
 		 * @param {ScrollMagic.Scene} Scene - ScrollMagic Scene or Array of Scenes that is/are supposed to be updated.
-		 * @param {boolean} [immediately=false] - If `true` the update will be instant, if `false` it will wait until next update cycle.  
+		 * @param {boolean} [immediately=false] - If `true` the update will be instant, if `false` it will wait until next update cycle.
 		 This is useful when changing multiple properties of the scene - this way it will only be updated once all new properties are set (updateScenes).
 		 * @return {Controller} Parent object for chaining.
 		 */
@@ -8446,10 +10598,10 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		};
 
 		/**
-		 * Updates the controller params and calls updateScene on every scene, that is attached to the controller.  
-		 * See `Controller.updateScene()` for more information about what this means.  
-		 * In most cases you will not need this function, as it is called constantly, whenever ScrollMagic detects a state change event, like resize or scroll.  
-		 * The only application for this method is when ScrollMagic fails to detect these events.  
+		 * Updates the controller params and calls updateScene on every scene, that is attached to the controller.
+		 * See `Controller.updateScene()` for more information about what this means.
+		 * In most cases you will not need this function, as it is called constantly, whenever ScrollMagic detects a state change event, like resize or scroll.
+		 * The only application for this method is when ScrollMagic fails to detect these events.
 		 * One application is with some external scroll libraries (like iScroll) that move an internal container to a negative offset instead of actually scrolling. In this case the update on the controller needs to be called whenever the child container's position changes.
 		 * For this case there will also be the need to provide a custom function to calculate the correct scroll position. See `Controller.scrollPos()` for details.
 		 * @public
@@ -8474,7 +10626,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		};
 
 		/**
-		 * Scroll to a numeric scroll offset, a DOM element, the start of a scene or provide an alternate method for scrolling.  
+		 * Scroll to a numeric scroll offset, a DOM element, the start of a scene or provide an alternate method for scrolling.
 		 * For vertical controllers it will change the top scroll offset and for horizontal applications it will change the left offset.
 		 * @public
 		 *
@@ -8523,13 +10675,13 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 *
 		 * @param {mixed} scrollTarget - The supplied argument can be one of these types:
 		 * 1. `number` -> The container will scroll to this new scroll offset.
-		 * 2. `string` or `object` -> Can be a selector or a DOM object.  
+		 * 2. `string` or `object` -> Can be a selector or a DOM object.
 		 *  The container will scroll to the position of this element.
 		 * 3. `ScrollMagic Scene` -> The container will scroll to the start of this scene.
-		 * 4. `function` -> This function will be used for future scroll position modifications.  
-		 *  This provides a way for you to change the behaviour of scrolling and adding new behaviour like animation. The function receives the new scroll position as a parameter and a reference to the container element using `this`.  
-		 *  It may also optionally receive an optional additional parameter (see below)  
-		 *  _**NOTE:**  
+		 * 4. `function` -> This function will be used for future scroll position modifications.
+		 *  This provides a way for you to change the behaviour of scrolling and adding new behaviour like animation. The function receives the new scroll position as a parameter and a reference to the container element using `this`.
+		 *  It may also optionally receive an optional additional parameter (see below)
+		 *  _**NOTE:**
 		 *  All other options will still work as expected, using the new function to scroll._
 		 * @param {mixed} [additionalParameter] - If a custom scroll function was defined (see above 4.), you may want to supply additional parameters to it, when calling it. You can do this using this parameter – see examples for details. Please note, that this parameter will have no effect, if you use the default scrolling function.
 		 * @returns {Controller} Parent object for chaining.
@@ -8573,17 +10725,17 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		};
 
 		/**
-		 * **Get** the current scrollPosition or **Set** a new method to calculate it.  
+		 * **Get** the current scrollPosition or **Set** a new method to calculate it.
 		 * -> **GET**:
-		 * When used as a getter this function will return the current scroll position.  
-		 * To get a cached value use Controller.info("scrollPos"), which will be updated in the update cycle.  
+		 * When used as a getter this function will return the current scroll position.
+		 * To get a cached value use Controller.info("scrollPos"), which will be updated in the update cycle.
 		 * For vertical controllers it will return the top scroll offset and for horizontal applications it will return the left offset.
 		 *
 		 * -> **SET**:
-		 * When used as a setter this method prodes a way to permanently overwrite the controller's scroll position calculation.  
-		 * A typical usecase is when the scroll position is not reflected by the containers scrollTop or scrollLeft values, but for example by the inner offset of a child container.  
-		 * Moving a child container inside a parent is a commonly used method for several scrolling frameworks, including iScroll.  
-		 * By providing an alternate calculation function you can make sure ScrollMagic receives the correct scroll position.  
+		 * When used as a setter this method prodes a way to permanently overwrite the controller's scroll position calculation.
+		 * A typical usecase is when the scroll position is not reflected by the containers scrollTop or scrollLeft values, but for example by the inner offset of a child container.
+		 * Moving a child container inside a parent is a commonly used method for several scrolling frameworks, including iScroll.
+		 * By providing an alternate calculation function you can make sure ScrollMagic receives the correct scroll position.
 		 * Please also bear in mind that your function should return y values for vertical scrolls an x for horizontals.
 		 *
 		 * To change the current scroll position please use `Controller.scrollTo()`.
@@ -8624,7 +10776,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * // returns all infos as an object
 		 * var infos = controller.info();
 		 *
-		 * @param {string} [about] - If passed only this info will be returned instead of an object containing all.  
+		 * @param {string} [about] - If passed only this info will be returned instead of an object containing all.
 		 Valid options are:
 		 ** `"size"` => the current viewport size of the container
 		 ** `"vertical"` => true if vertical scrolling, otherwise false
@@ -8678,7 +10830,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		};
 
 		/**
-		 * **Get** or **Set** the current enabled state of the controller.  
+		 * **Get** or **Set** the current enabled state of the controller.
 		 * This can be used to disable all Scenes connected to the controller without destroying or removing them.
 		 * @public
 		 *
@@ -8782,15 +10934,15 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 	 *		reverse: false
 	 * });
 	 *
-	 * @param {object} [options] - Options for the Scene. The options can be updated at any time.  
-	 Instead of setting the options for each scene individually you can also set them globally in the controller as the controllers `globalSceneOptions` option. The object accepts the same properties as the ones below.  
+	 * @param {object} [options] - Options for the Scene. The options can be updated at any time.
+	 Instead of setting the options for each scene individually you can also set them globally in the controller as the controllers `globalSceneOptions` option. The object accepts the same properties as the ones below.
 	 When a scene is added to the controller the options defined using the Scene constructor will be overwritten by those set in `globalSceneOptions`.
-	 * @param {(number|function)} [options.duration=0] - The duration of the scene. 
-	 If `0` tweens will auto-play when reaching the scene start point, pins will be pinned indefinetly starting at the start position.  
+	 * @param {(number|function)} [options.duration=0] - The duration of the scene.
+	 If `0` tweens will auto-play when reaching the scene start point, pins will be pinned indefinetly starting at the start position.
 	 A function retuning the duration value is also supported. Please see `Scene.duration()` for details.
 	 * @param {number} [options.offset=0] - Offset Value for the Trigger Position. If no triggerElement is defined this will be the scroll distance from the start of the page, after which the scene will start.
 	 * @param {(string|object)} [options.triggerElement=null] - Selector or DOM object that defines the start of the scene. If undefined the scene will start right at the start of the page (unless an offset is set).
-	 * @param {(number|string)} [options.triggerHook="onCenter"] - Can be a number between 0 and 1 defining the position of the trigger Hook in relation to the viewport.  
+	 * @param {(number|string)} [options.triggerHook="onCenter"] - Can be a number between 0 and 1 defining the position of the trigger Hook in relation to the viewport.
 	 Can also be defined using a string:
 	 ** `"onEnter"` => `1`
 	 ** `"onCenter"` => `0.5`
@@ -8801,7 +10953,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 	 ** `1` => errors
 	 ** `2` => errors, warnings
 	 ** `3` => errors, warnings, debuginfo
-	 * 
+	 *
 	 */
 	ScrollMagic.Scene = function (options) {
 
@@ -8865,8 +11017,8 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 
 		var _listeners = {};
 		/**
-		 * Scene start event.  
-		 * Fires whenever the scroll position its the starting point of the scene.  
+		 * Scene start event.
+		 * Fires whenever the scroll position its the starting point of the scene.
 		 * It will also fire when scrolling back up going over the start position of the scene. If you want something to happen only when scrolling down/right, use the scrollDirection parameter passed to the callback.
 		 *
 		 * For details on this event and the order in which it is fired, please review the {@link Scene.progress} method.
@@ -8886,8 +11038,8 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * @property {string} event.scrollDirection - Indicates which way we are scrolling `"PAUSED"`, `"FORWARD"` or `"REVERSE"`
 		 */
 		/**
-		 * Scene end event.  
-		 * Fires whenever the scroll position its the ending point of the scene.  
+		 * Scene end event.
+		 * Fires whenever the scroll position its the ending point of the scene.
 		 * It will also fire when scrolling back up from after the scene and going over its end position. If you want something to happen only when scrolling down/right, use the scrollDirection parameter passed to the callback.
 		 *
 		 * For details on this event and the order in which it is fired, please review the {@link Scene.progress} method.
@@ -8907,8 +11059,8 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * @property {string} event.scrollDirection - Indicates which way we are scrolling `"PAUSED"`, `"FORWARD"` or `"REVERSE"`
 		 */
 		/**
-		 * Scene enter event.  
-		 * Fires whenever the scene enters the "DURING" state.  
+		 * Scene enter event.
+		 * Fires whenever the scene enters the "DURING" state.
 		 * Keep in mind that it doesn't matter if the scene plays forward or backward: This event always fires when the scene enters its active scroll timeframe, regardless of the scroll-direction.
 		 *
 		 * For details on this event and the order in which it is fired, please review the {@link Scene.progress} method.
@@ -8928,8 +11080,8 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * @property {string} event.scrollDirection - Indicates which way we are scrolling `"PAUSED"`, `"FORWARD"` or `"REVERSE"`
 		 */
 		/**
-		 * Scene leave event.  
-		 * Fires whenever the scene's state goes from "DURING" to either "BEFORE" or "AFTER".  
+		 * Scene leave event.
+		 * Fires whenever the scene's state goes from "DURING" to either "BEFORE" or "AFTER".
 		 * Keep in mind that it doesn't matter if the scene plays forward or backward: This event always fires when the scene leaves its active scroll timeframe, regardless of the scroll-direction.
 		 *
 		 * For details on this event and the order in which it is fired, please review the {@link Scene.progress} method.
@@ -8949,7 +11101,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * @property {string} event.scrollDirection - Indicates which way we are scrolling `"PAUSED"`, `"FORWARD"` or `"REVERSE"`
 		 */
 		/**
-		 * Scene update event.  
+		 * Scene update event.
 		 * Fires whenever the scene is updated (but not necessarily changes the progress).
 		 *
 		 * @event ScrollMagic.Scene#update
@@ -8967,7 +11119,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * @property {number} event.scrollPos - The current scroll position of the container
 		 */
 		/**
-		 * Scene progress event.  
+		 * Scene progress event.
 		 * Fires whenever the progress of the scene changes.
 		 *
 		 * For details on this event and the order in which it is fired, please review the {@link Scene.progress} method.
@@ -8987,7 +11139,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * @property {string} event.scrollDirection - Indicates which way we are scrolling `"PAUSED"`, `"FORWARD"` or `"REVERSE"`
 		 */
 		/**
-		 * Scene change event.  
+		 * Scene change event.
 		 * Fires whenvever a property of the scene is changed.
 		 *
 		 * @event ScrollMagic.Scene#change
@@ -9004,7 +11156,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * @property {mixed} event.newval - The new value of the changed property
 		 */
 		/**
-		 * Scene shift event.  
+		 * Scene shift event.
 		 * Fires whenvever the start or end **scroll offset** of the scene change.
 		 * This happens explicitely, when one of these values change: `offset`, `duration` or `triggerHook`.
 		 * It will fire implicitly when the `triggerElement` changes, if the new element has a different position (most cases).
@@ -9024,7 +11176,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * @property {string} event.reason - Indicates why the scene has shifted
 		 */
 		/**
-		 * Scene destroy event.  
+		 * Scene destroy event.
 		 * Fires whenvever the scene is destroyed.
 		 * This can be used to tidy up custom behaviour used in events.
 		 *
@@ -9049,7 +11201,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * @property {boolean} event.reset - Indicates if the destroy method was called with reset `true` or `false`.
 		 */
 		/**
-		 * Scene add event.  
+		 * Scene add event.
 		 * Fires when the scene is added to a controller.
 		 * This is mostly used by plugins to know that change might be due.
 		 *
@@ -9067,7 +11219,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * @property {boolean} event.controller - The controller object the scene was added to.
 		 */
 		/**
-		 * Scene remove event.  
+		 * Scene remove event.
 		 * Fires when the scene is removed from a controller.
 		 * This is mostly used by plugins to know that change might be due.
 		 *
@@ -9085,7 +11237,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 */
 
 		/**
-		 * Add one ore more event listener.  
+		 * Add one ore more event listener.
 		 * The callback function will be fired at the respective event, and an object containing relevant data will be passed to the callback.
 		 * @method ScrollMagic.Scene#on
 		 *
@@ -9233,7 +11385,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		};
 
 		/**
-		 * Add the scene to a controller.  
+		 * Add the scene to a controller.
 		 * This is the equivalent to `Controller.addScene(scene)`.
 		 * @method ScrollMagic.Scene#addTo
 		 *
@@ -9269,7 +11421,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		};
 
 		/**
-		 * **Get** or **Set** the current enabled state of the scene.  
+		 * **Get** or **Set** the current enabled state of the scene.
 		 * This can be used to disable this scene without removing or destroying it.
 		 * @method ScrollMagic.Scene#enabled
 		 *
@@ -9294,7 +11446,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		};
 
 		/**
-		 * Remove the scene from the controller.  
+		 * Remove the scene from the controller.
 		 * This is the equivalent to `Controller.removeScene(scene)`.
 		 * The scene will not be updated anymore until you readd it to a controller.
 		 * To remove the pin or the tween you need to call removeTween() or removePin() respectively.
@@ -9342,11 +11494,11 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 
 
 		/**
-		 * Updates the Scene to reflect the current state.  
-		 * This is the equivalent to `Controller.updateScene(scene, immediately)`.  
-		 * The update method calculates the scene's start and end position (based on the trigger element, trigger hook, duration and offset) and checks it against the current scroll position of the container.  
+		 * Updates the Scene to reflect the current state.
+		 * This is the equivalent to `Controller.updateScene(scene, immediately)`.
+		 * The update method calculates the scene's start and end position (based on the trigger element, trigger hook, duration and offset) and checks it against the current scroll position of the container.
 		 * It then updates the current scene state accordingly (or does nothing, if the state is already correct) – Pins will be set to their correct position and tweens will be updated to their correct progress.
-		 * This means an update doesn't necessarily result in a progress change. The `progress` event will be fired if the progress has indeed changed between this update and the last.  
+		 * This means an update doesn't necessarily result in a progress change. The `progress` event will be fired if the progress has indeed changed between this update and the last.
 		 * _**NOTE:** This method gets called constantly whenever ScrollMagic detects a change. The only application for you is if you change something outside of the realm of ScrollMagic, like moving the trigger or changing tween parameters._
 		 * @method ScrollMagic.Scene#update
 		 * @example
@@ -9395,7 +11547,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		/**
 		 * Updates dynamic scene variables like the trigger element position or the duration.
 		 * This method is automatically called in regular intervals from the controller. See {@link ScrollMagic.Controller} option `refreshInterval`.
-		 * 
+		 *
 		 * You can call it to minimize lag, for example when you intentionally change the position of the triggerElement.
 		 * If you don't it will simply be updated in the next refresh interval of the container, which is usually sufficient.
 		 *
@@ -9403,7 +11555,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * @since 1.1.0
 		 * @example
 		 * scene = new ScrollMagic.Scene({triggerElement: "#trigger"});
-		 * 
+		 *
 		 * // change the position of the trigger
 		 * $("#trigger").css("top", 500);
 		 * // immediately let the scene know of this change
@@ -9422,33 +11574,33 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		};
 
 		/**
-		 * **Get** or **Set** the scene's progress.  
-		 * Usually it shouldn't be necessary to use this as a setter, as it is set automatically by scene.update().  
+		 * **Get** or **Set** the scene's progress.
+		 * Usually it shouldn't be necessary to use this as a setter, as it is set automatically by scene.update().
 		 * The order in which the events are fired depends on the duration of the scene:
-		 *  1. Scenes with `duration == 0`:  
-		 *  Scenes that have no duration by definition have no ending. Thus the `end` event will never be fired.  
-		 *  When the trigger position of the scene is passed the events are always fired in this order:  
-		 *  `enter`, `start`, `progress` when scrolling forward  
-		 *  and  
+		 *  1. Scenes with `duration == 0`:
+		 *  Scenes that have no duration by definition have no ending. Thus the `end` event will never be fired.
+		 *  When the trigger position of the scene is passed the events are always fired in this order:
+		 *  `enter`, `start`, `progress` when scrolling forward
+		 *  and
 		 *  `progress`, `start`, `leave` when scrolling in reverse
-		 *  2. Scenes with `duration > 0`:  
-		 *  Scenes with a set duration have a defined start and end point.  
-		 *  When scrolling past the start position of the scene it will fire these events in this order:  
-		 *  `enter`, `start`, `progress`  
-		 *  When continuing to scroll and passing the end point it will fire these events:  
-		 *  `progress`, `end`, `leave`  
-		 *  When reversing through the end point these events are fired:  
-		 *  `enter`, `end`, `progress`  
-		 *  And when continuing to scroll past the start position in reverse it will fire:  
-		 *  `progress`, `start`, `leave`  
+		 *  2. Scenes with `duration > 0`:
+		 *  Scenes with a set duration have a defined start and end point.
+		 *  When scrolling past the start position of the scene it will fire these events in this order:
+		 *  `enter`, `start`, `progress`
+		 *  When continuing to scroll and passing the end point it will fire these events:
+		 *  `progress`, `end`, `leave`
+		 *  When reversing through the end point these events are fired:
+		 *  `enter`, `end`, `progress`
+		 *  And when continuing to scroll past the start position in reverse it will fire:
+		 *  `progress`, `start`, `leave`
 		 *  In between start and end the `progress` event will be called constantly, whenever the progress changes.
-		 * 
-		 * In short:  
-		 * `enter` events will always trigger **before** the progress update and `leave` envents will trigger **after** the progress update.  
+		 *
+		 * In short:
+		 * `enter` events will always trigger **before** the progress update and `leave` envents will trigger **after** the progress update.
 		 * `start` and `end` will always trigger at their respective position.
-		 * 
+		 *
 		 * Please review the event descriptions for details on the events and the event object that is passed to the callback.
-		 * 
+		 *
 		 * @method ScrollMagic.Scene#progress
 		 * @example
 		 * // get the current scene progress
@@ -9538,7 +11690,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 * Update the start and end scrollOffset of the container.
 		 * The positions reflect what the controller's scroll position will be at the start and end respectively.
 		 * Is called, when:
-		 *   - Scene event "change" is called with: offset, triggerHook, duration 
+		 *   - Scene event "change" is called with: offset, triggerHook, duration
 		 *   - scroll container event "resize" is called
 		 *   - the position of the triggerElement changes
 		 *   - the controller changes -> addTo()
@@ -9558,7 +11710,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		/**
 		 * Updates the duration if set to a dynamic function.
 		 * This method is called when the scene is added to a controller and in regular intervals from the controller through scene.refresh().
-		 * 
+		 *
 		 * @fires {@link Scene.change}, if the duration changed
 		 * @fires {@link Scene.shift}, if the duration changed
 		 *
@@ -9587,7 +11739,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 *  - ... when the triggerElement is changed
 		 *  - ... when the scene is added to a (new) controller
 		 *  - ... in regular intervals from the controller through scene.refresh().
-		 * 
+		 *
 		 * @fires {@link Scene.shift}, if the position changed
 		 *
 		 * @param {boolean} [suppressEvents=false] - If true the shift event will be suppressed.
@@ -9753,12 +11905,12 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 
 		/**
 		 * **Get** or **Set** the duration option value.
-		 * As a setter it also accepts a function returning a numeric value.  
+		 * As a setter it also accepts a function returning a numeric value.
 		 * This is particularly useful for responsive setups.
 		 *
-		 * The duration is updated using the supplied function every time `Scene.refresh()` is called, which happens periodically from the controller (see ScrollMagic.Controller option `refreshInterval`).  
-		 * _**NOTE:** Be aware that it's an easy way to kill performance, if you supply a function that has high CPU demand.  
-		 * Even for size and position calculations it is recommended to use a variable to cache the value. (see example)  
+		 * The duration is updated using the supplied function every time `Scene.refresh()` is called, which happens periodically from the controller (see ScrollMagic.Controller option `refreshInterval`).
+		 * _**NOTE:** Be aware that it's an easy way to kill performance, if you supply a function that has high CPU demand.
+		 * Even for size and position calculations it is recommended to use a variable to cache the value. (see example)
 		 * This counts double if you use the same function for multiple scenes._
 		 *
 		 * @method ScrollMagic.Scene#duration
@@ -9902,8 +12054,8 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		};
 
 		/**
-		 * **Get** the current scroll offset for the start of the scene.  
-		 * Mind, that the scrollOffset is related to the size of the container, if `triggerHook` is bigger than `0` (or `"onLeave"`).  
+		 * **Get** the current scroll offset for the start of the scene.
+		 * Mind, that the scrollOffset is related to the size of the container, if `triggerHook` is bigger than `0` (or `"onLeave"`).
 		 * This means, that resizing the container or changing the `triggerHook` will influence the scene's start offset.
 		 * @method ScrollMagic.Scene#scrollOffset
 		 * @example
@@ -9919,7 +12071,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		};
 
 		/**
-		 * **Get** the trigger position of the scene (including the value of the `offset` option).  
+		 * **Get** the trigger position of the scene (including the value of the `offset` option).
 		 * @method ScrollMagic.Scene#triggerPosition
 		 * @example
 		 * // get the scene's trigger position
@@ -10123,8 +12275,8 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		};
 
 		/**
-		 * Pin an element for the duration of the tween.  
-		 * If the scene duration is 0 the element will only be unpinned, if the user scrolls back past the start position.  
+		 * Pin an element for the duration of the tween.
+		 * If the scene duration is 0 the element will only be unpinned, if the user scrolls back past the start position.
 		 * Make sure only one pin is applied to an element at the same time.
 		 * An element can be pinned multiple times, but only successively.
 		 * _**NOTE:** The option `pushFollowers` has no effect, when the scene duration is 0._
@@ -10138,7 +12290,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 		 *
 		 * @param {(string|object)} element - A Selector targeting an element or a DOM object that is supposed to be pinned.
 		 * @param {object} [settings] - settings for the pin
-		 * @param {boolean} [settings.pushFollowers=true] - If `true` following elements will be "pushed" down for the duration of the pin, if `false` the pinned element will just scroll past them.  
+		 * @param {boolean} [settings.pushFollowers=true] - If `true` following elements will be "pushed" down for the duration of the pin, if `false` the pinned element will just scroll past them.
 		 Ignored, when duration is `0`.
 		 * @param {string} [settings.spacerClass="scrollmagic-pin-spacer"] - Classname of the pin spacer element, which is used to replace the element.
 		 *
@@ -10247,7 +12399,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 				});
 			}
 
-			// now place the pin element inside the spacer	
+			// now place the pin element inside the spacer
 			spacer.appendChild(_pin);
 			// and set new css
 			_util.css(_pin, {
@@ -10340,7 +12492,7 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 			Scene.removeClassToggle(e.reset);
 		});
 		/**
-		 * Define a css class modification while the scene is active.  
+		 * Define a css class modification while the scene is active.
 		 * When the scene triggers the classes will be added to the supplied element and removed, when the scene is over.
 		 * If the scene duration is 0 the classes will only be removed if the user scrolls back past the start position.
 		 * @method ScrollMagic.Scene#setClassToggle
@@ -10808,7 +12960,8 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 
 	return ScrollMagic;
 }));
-},{}],3:[function(require,module,exports){
+
+},{}],5:[function(require,module,exports){
 /*!
  * ScrollMagic v2.0.6 (2018-10-08)
  * The javascript library for magical scroll interactions.
@@ -11119,305 +13272,378 @@ if (_gsScope._gsDefine) { _gsScope._gsQueue.pop()(); } //necessary in case Tween
 
 	});
 }));
-},{"gsap":1,"scrollmagic":2}],4:[function(require,module,exports){
+},{"gsap":3,"scrollmagic":4}],6:[function(require,module,exports){
 
 
 ( function(window) {
     'use strict';
 
-    // Plugins
-
+    var XPR_ScrollerHor = require( 'el_horscroll.js' );
     var ScrollMagic = require('scrollmagic');
-    require('scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap');
-    var gsap = require('gsap');
-
-    var TouchManager = require( 'touchmanager.js' );
-
-    var getMousePos = function(e){
-        var posx = e.pageX;
-        var posy = e.pageY;
-        return { x : posx, y : posy };
-    };
-
-    var mapRange = function(num, in_min, in_max, out_min, out_max)  {
-        return (num - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-    };
-
-    var toggleScroll = function(action) {
-        if(action === 'disable') {
-            document.querySelector('body').classList.add('no-scroll');
-            document.querySelector('html').classList.add('no-scroll');
-        } else if(action === 'enable') {
-            document.querySelector('body').classList.remove('no-scroll');
-            document.querySelector('html').classList.remove('no-scroll');
-        }
-    };
-
     // DOM
     var isfContainer = document.querySelector( ".isf-experiment__container" );
     var controller = new ScrollMagic.Controller();
 
-    var ww = window.innerWidth;
-    var wh = window.innerHeight;
-
-    function XPR_El(el){
-        this.DOM = {el: el};
-        this.inViewport = false;
-        this.animation = this.DOM.el.dataset.anim;
-        console.log(this);
-        this.init();
-    }
-
-    XPR_El.prototype.init = function(){
-
-    };
-
-    XPR_El.prototype.isInViewport = function(){
-        return (this.DOM.el.getBoundingClientRect().left);
-    };
-
-    XPR_El.prototype.animate = function( amount ){
-        console.log("animating");
-        this.DOM.el.classList.add( "in--viewport" );
-        // TweenMax.to(this.DOM.el, 1, {
-        //     scale: 1.2
-        // });
-        if( this.animation === 'parallax' ){
-            // init parallax on move
-            console.log("parallaxing");
-            var pVal = mapRange(amount, -500, 500, -50, 50);
-            TweenMax.to(this.DOM.el, 1, {
-                x: '+=' + pVal
-            });
-        } else if ( this.animation === 'scale' ){
-            TweenMax.to(this.DOM.el, 1, {
-                scale: 1.2
-            });
-        } else if ( this.animation === 'opacity' ){
-            TweenMax.to(this.DOM.el, 1, {
-                opacity: 1
-            });
-        }
-    };
-
-    function XPR_ScrollerHor(el, controller){
-        this.DOM = {el: el};
-        this.controller = controller;
-
-        this.DOM.inner = this.DOM.el.querySelector( ".xpr-horscroll--inner" );
-        this.DOM.scenesContainer = this.DOM.el.querySelector( ".xpr-horscroll__scenes" );
-        this.DOM.scenes = Array.from( this.DOM.inner.querySelectorAll( ".xpr-horscroll__scene" ) );
-        this.DOM.steps = Array.from( this.DOM.el.querySelectorAll( ".xpr-horscroll__step" ) );
-
-        this.currentScene = 0;
-        this.translateVal = 0; // starts untranslated
-
-        this.DOM.els = Array.from( this.DOM.el.querySelectorAll( ".xpr-el" ) );
-        this.els = [];
-        var self = this;
-        this.DOM.els.forEach( function(el, ind) {
-            self.els.push( new XPR_El(el) );
-        });
-
-        this.init();
-    }
-
-    // disable scroll on enter :)
-    XPR_ScrollerHor.prototype.init = function(){
-
-        // fix on screen
-        var self = this;
-        this.scene = new ScrollMagic.Scene({
-            triggerElement: this.DOM.el,
-            triggerHook: 0,
-            duration: (this.DOM.el.offsetHeight - wh)
-        })
-            .on( 'start', function() {
-                self.DOM.inner.classList.remove( 'is--bottom' );
-            })
-            .on( 'end', function() {
-                self.DOM.inner.classList.add( 'is--bottom' );
-            })
-            .setClassToggle( this.DOM.inner, 'is--fixed' )
-            .addTo( this.controller );
-
-        TouchManager.swipeDetect( this.DOM.el, function(swipedir, dx, dy) {
-            // left, right, up, down
-            document.querySelector( '.let-me-know' ).innerHTML = swipedir;
-            var dir = (dx < 0) ? 'next' : 'prev';
-            var amount = mapRange(dx, -500, 500, -window.innerWidth, window.innerWidth);
-            self.navigate( dir, amount );
-
-            // self.els.forEach( function(el, ind) {
-            //     el.isInViewport();
-            // });
-        });
-    };
-
-    XPR_ScrollerHor.prototype.navigate = function(dir, amount){
-
-        this.translateVal += amount;
-        var self = this;
-
-        // check if adding this amount to the el.left would bring it into viewport
-        self.els.forEach( function(el, ind) {
-            console.log(el);
-            //console.log( "last", el.DOM.el.getBoundingClientRect().left, amount, el.DOM.el.getBoundingClientRect().left - amount);
-            if( ((el.DOM.el.getBoundingClientRect().left + amount) < (window.innerWidth*3/4)) && ((el.DOM.el.getBoundingClientRect().left + amount) > (0 - el.DOM.el.getBoundingClientRect().width)) ) {
-                if( el.isInViewport() ){
-                    el.inViewport = true; // animate only once
-                    el.animate( amount );
-                } else {
-                    el.inViewport = false;
-                }
-            }
-
-        });
-        TweenMax.to( this.DOM.scenesContainer, 1.5, {
-            x: "+=" + amount,
-            ease: Power3.easeOut,
-            onComplete: function() {
-
-            }
-        });
-        //console.log(document.querySelector('.test').getBoundingClientRect());
-    };
-
+    // create a scrollerHor object
     var xprScrollerHor = new XPR_ScrollerHor( document.querySelector( ".xpr-horscroll" ), controller );
 
+    // at which point
 
 })(window);
 
 
-},{"gsap":1,"scrollmagic":2,"scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap":3,"touchmanager.js":5}],5:[function(require,module,exports){
+},{"el_horscroll.js":7,"scrollmagic":4}],7:[function(require,module,exports){
+// Plugins
+var ScrollMagic = require('scrollmagic');
+require('scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap');
+var gsap = require('gsap');
+//require('gsap/ScrollToPlugin');
+require( 'gsap/src/uncompressed/plugins/ScrollToPlugin.js'﻿ );
+console.log(ScrollToPlugin); // ???? dafuq.
 
+var SwipeManager = require( 'swipemanager.js' ); // manages and returns data about swipe events. mobile only!
+var XPR_ScrollerHorItem = require( 'el_horscroll_item.js' ); // manages and returns data about swipe events. mobile only!
 
-module.exports = {
+var ww = window.innerWidth;
+var wh = window.innerHeight;
 
-  /* A function checking if we're touching or not */
-  clickOrTouch : function() {
-    return (document.ontouchstart !== null ? 'mousedown' : 'touchstart');
-  },
+// TO DO: Put into helpers func folder
+var mapRange = function(num, in_min, in_max, out_min, out_max)  {
+    return (num - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+};
 
-  tapOrScroll : function() {
-    var startTime = new Date().getTime(); // record time when finger first makes contact with surface
+var clamp = function(val, min, max) {
+    return Math.min(Math.max(min, val), max);
+};
 
-    touchsurface.addEventListener('touchend', function(e) {
-      var touchobj = e.changedTouches[0];
-      distX = touchobj.pageX - startX; // get horizontal dist traveled by finger while in contact with surface
-      distY = touchobj.pageY - startY; // get vertical dist traveled by finger while in contact with surface
-      elapsedTime = new Date().getTime() - startTime; // get time elapsed
-      if (elapsedTime <= allowedTime) { // first condition for awipe met
-        if (Math.abs(distX) >= threshold && Math.abs(distY) <= restraint) { // 2nd condition for horizontal swipe met
-          swipedir = (distX < 0) ? 'left' : 'right'; // if dist traveled is negative, it indicates left swipe
-        } else if (Math.abs(distY) >= threshold && Math.abs(distX) <= restraint) { // 2nd condition for vertical swipe met
-          swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
-        }
-      }
-      handleswipe(swipedir);
-      e.preventDefault();
-    }, false);
-  },
+function XPR_ScrollerHor(el, controller){
+  this.DOM = {el: el};
+  this.controller = controller;
 
-  isTouch : function() {
-    return (('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (navigator.msMaxTouchPoints > 0));
-  },
+  var self = this;
 
-  longPress : function(item, doSomething) {
-    var timerID;
-    var counter = 0;
-    var pressHoldEvent = new CustomEvent('pressHold');
+  this.DOM.inner = this.DOM.el.querySelector( ".xpr-horscroll--inner" );
+  this.DOM.scenesContainer = this.DOM.el.querySelector( ".xpr-horscroll__scenes" );
+  this.DOM.scenes = Array.from( this.DOM.inner.querySelectorAll( ".xpr-horscroll__scene" ) );
+  this.DOM.steps = Array.from( this.DOM.el.querySelectorAll( ".xpr-horscroll__step" ) );
 
-    // Increase or decreae value to adjust how long
-    // one should keep pressing down before the pressHold
-    // event fires
-    var pressHoldDuration = 50;
+  this.DOM.nav = this.DOM.el.querySelector( ".xpr-horscroll__nav" );
+  this.DOM.navSideways = this.DOM.nav.querySelector( ".xpr-horscroll__nav__sideways" );
+  this.DOM.navUp = this.DOM.nav.querySelector( ".xpr-horscroll__nav__up" );
+  this.DOM.navDown = this.DOM.nav.querySelector( ".xpr-horscroll__nav__down" );
 
-    // Listening for the mouse and touch events
-    item.addEventListener('mousedown', pressingDown, false);
-    item.addEventListener('mouseup', notPressingDown, false);
-    item.addEventListener('mouseleave', notPressingDown, false);
+  this.currentScene = 0;
+  this.pos = 0; // starts at 0. track translates
+  this.isSwiping = false;
+  this.isSwipingUp = true; //when we enter the page we can still swipe up to exit?
+  this.isSwipingDown = true;
 
-    item.addEventListener('touchstart', pressingDown, false);
-    item.addEventListener('touchend', notPressingDown, false);
+  this.fixViewport = true;
 
-    // Listening for our custom pressHold event
-    item.addEventListener('pressHold', doSomething, false);
+  this.els = [];
 
-    function pressingDown(e) {
-      // Start the timer
-      requestAnimationFrame(timer);
-      e.preventDefault();
+  Array.from( this.DOM.el.querySelectorAll( ".xpr-el" ) ).forEach( function(el, ind) {
+      self.els.push( new XPR_ScrollerHorItem(el) );
+  });
+
+  // bounds for how much you can swipe left and right
+  this.DOM.bounds = { max: 0, min: -(this.DOM.scenesContainer.offsetWidth - ww) };
+
+  this.init();
+}
+
+XPR_ScrollerHor.prototype.init = function(){
+
+    var self = this;
+    this.scrollScene = new ScrollMagic.Scene({
+              triggerElement: this.DOM.el,
+              triggerHook: 0,
+              duration: this.DOM.el.offsetHeight
+    })
+        .on( 'start', function() {
+          console.log('start', self.fixViewport);
+          if( self.fixViewport === true ) {
+            self.DOM.inner.classList.add('is--fixed'); // !!! 1. FIX ELEMENT.
+            self.DOM.navSideways.classList.add( 'is--visible' );
+            self.initSwipeManager();
+          }
+        })
+        .addTo( this.controller );
+};
+
+XPR_ScrollerHor.prototype.initSwipeManager = function(){
+  var self = this;
+  SwipeManager.detectSwipe( this.DOM.inner, false, function(swipedir, dx, dy) {
+    var dir = swipedir; //(dx < 0) ? 'next' : 'prev';
+    var amount = mapRange(dx, -500, 500, -window.innerWidth, window.innerWidth);
+    // check if exits are enabled and the gesture is right :)
+    if( self.isSwipingUp && ( swipedir === 'down' ) ){
+        self.exit( 'up' );
+    } else if( self.isSwipingDown && ( swipedir === 'up' ) ){
+        self.exit( 'down' );
+    } else {
+        // else we don't care about swipedir per se, amount explains it
+        self.navigate( dir, amount );
     }
+  });
+};
 
-    function notPressingDown(e) {
-      // Stop the timer
-      cancelAnimationFrame(timerID);
-      counter = 0;
-    }
-
-    function timer() {
-      if (counter < pressHoldDuration) {
-        timerID = requestAnimationFrame(timer);
-        counter++;
-      } else {
-        doSomething();
-      }
-    }
-  },
-
-  /* A function to manage swipes */
-  swipeDetect : function(el, callback) {
-    console.log("listening!");
-    var touchsurface = el;
-    var swipedir;
-    var startX;
-    var startY;
-    var distX;
-    var distY;
-    var threshold = 150; // required min distance traveled to be considered swipe
-    var restraint = 100; // maximum distance allowed at the same time in perpendicular direction
-    var allowedTime = 300; // maximum time allowed to travel that distance
-    var elapsedTime;
-    var startTime;
-    var handleswipe = callback || function (swipedir, dx, dy) {};
-
-    touchsurface.addEventListener('touchstart', function(e) {
-      var touchobj = e.changedTouches[0];
-      swipedir = 'none';
-      dist = 0;
-      startX = touchobj.pageX;
-      startY = touchobj.pageY;
-      startTime = new Date().getTime(); // record time when finger first makes contact with surface
-      e.preventDefault();
-    }, false);
-
-    touchsurface.addEventListener('touchmove', function(e) {
-      e.preventDefault(); // prevent scrolling when inside DIV
-    }, false);
-
-    touchsurface.addEventListener('touchend', function(e) {
-      var touchobj = e.changedTouches[0];
-      distX = touchobj.pageX - startX; // get horizontal dist traveled by finger while in contact with surface
-      distY = touchobj.pageY - startY; // get vertical dist traveled by finger while in contact with surface
-      elapsedTime = new Date().getTime() - startTime; // get time elapsed
-      // if (elapsedTime <= allowedTime) { // first condition for awipe met
-      //   if (Math.abs(distX) >= threshold && Math.abs(distY) <= restraint) { // 2nd condition for horizontal swipe met
-      //     swipedir = (distX < 0) ? 'left' : 'right'; // if dist traveled is negative, it indicates left swipe
-      //   } else if (Math.abs(distY) >= threshold && Math.abs(distX) <= restraint) { // 2nd condition for vertical swipe met
-      //     swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
-      //   }
-      // }
-      if (Math.abs(distX) >= threshold && Math.abs(distY) <= restraint) { // 2nd condition for horizontal swipe met
-        swipedir = (distX < 0) ? 'left' : 'right'; // if dist traveled is negative, it indicates left swipe
-      } else if (Math.abs(distY) >= threshold && Math.abs(distX) <= restraint) { // 2nd condition for vertical swipe met
-        swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
-      }
-      console.log(swipedir, "dx", distX, "dy", distY);
-      handleswipe(swipedir, distX, distY);
-      e.preventDefault();
-    }, false);
+XPR_ScrollerHor.prototype.manageNav = function(up, down, side){
+  if( up === true ){
+    this.isSwipingUp = true;
+    this.DOM.navUp.classList.add( 'is--visible' );
+  } else {
+    this.isSwipingUp = false;
+    this.DOM.navUp.classList.remove( 'is--visible' );
+  }
+  if( down === true ){
+    this.isSwipingDown = true;
+    this.DOM.navDown.classList.add( 'is--visible' );
+  } else {
+    this.isSwipingDown = false;
+    this.DOM.navDown.classList.remove( 'is--visible' );
   }
 };
 
-},{}]},{},[4]);
+XPR_ScrollerHor.prototype.exit = function( dir ){
+
+    var self = this;
+
+    // remove scene until things have been cleared
+    this.fixViewport = false;
+    // remove event listeners
+    SwipeManager.detectSwipe( this.DOM.inner, true, function(){
+      console.log( "killed event listeners" );
+    } );
+    // reset to initial scroll pos
+    this.controller.scrollTo(this.DOM.el.offsetTop);
+    setTimeout(function(){
+      self.DOM.inner.classList.remove( 'is--fixed' );
+    }, 300);
+
+    // inparallel, scroll window
+    if( dir === 'up' ){
+        setTimeout(function(){
+          self.controller.scrollTo(self.DOM.el.offsetTop - 0.5*wh);
+        }, 300);
+    } else {
+        setTimeout(function(){
+          self.controller.scrollTo(self.DOM.el.offsetTop + 0.5*wh);
+        }, 300);
+    }
+
+    setTimeout(function(){
+      self.fixViewport = true;
+    }, 800);
+};
+
+XPR_ScrollerHor.prototype.navigate = function(dir, amount){
+  // bounds.max - this.pos > amount > bounds.min - this.pos
+  // so amount has to be clamped between those values
+  var self = this;
+  camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos));
+  this.pos += camount;
+  TweenMax.to( this.DOM.scenesContainer, 1.2, {
+      x: "+=" + camount,
+      ease: Power3.easeOut,
+      onComplete: function() {
+        // check if it is in the beginning or the end
+        if( self.pos >= (self.DOM.bounds.max - wh/2) ) {
+          self.manageNav(true, true);
+        } else if( self.pos <= (self.DOM.bounds.min + wh/2) ) {
+          self.manageNav(true, true);
+        } else {
+          // both are false
+          self.manageNav(true, true);
+        }
+      }
+  });
+
+  self.els.forEach( function(el, ind) {
+     // if it's in the viewport, animate by default
+    if( el.isInViewport ){
+      el.animate( amount );
+      // if it woud disappear, then set to false.
+      if(!el.willBeInViewport( amount )) {
+        el.isInViewport = false;
+      }
+    } else {
+      // check if the element would be in the viewport after the translation! (not their current position)
+      // so it can enter animating
+      if( el.willBeInViewport(amount) ) {
+        el.animate( amount );
+        el.isInViewport = true;
+      }
+    }
+  });
+
+};
+
+
+module.exports = XPR_ScrollerHor;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+},{"el_horscroll_item.js":8,"gsap":3,"gsap/src/uncompressed/plugins/ScrollToPlugin.js":1,"scrollmagic":4,"scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap":5,"swipemanager.js":9}],8:[function(require,module,exports){
+// Items within the Hor Scroll
+
+var ww = window.innerWidth;
+var wh = window.innerHeight;
+
+var mapRange = function(num, in_min, in_max, out_min, out_max)  {
+    return (num - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
+};
+
+function XPR_HorScrollItem(el){
+  this.DOM = {el: el};
+  this.animation = this.DOM.el.dataset.anim;
+  this.inViewport = false;
+  this.init();
+}
+
+XPR_HorScrollItem.prototype.init = function(){
+
+};
+
+XPR_HorScrollItem.prototype.willBeInViewport = function( amount ){
+  // rect.left > 0 && rect.left < window.innerWidth. amount takes in consideration the inited swipe
+  //console.log(this.DOM.el, (this.DOM.el.getBoundingClientRect().left + amount), (this.DOM.el.getBoundingClientRect().left));
+  return ( ((this.DOM.el.getBoundingClientRect().left + amount) > 0) && ((this.DOM.el.getBoundingClientRect().left + amount) < ww) );
+};
+
+XPR_HorScrollItem.prototype.animate = function( amount ){
+  this.DOM.el.classList.add( "in--viewport" );
+  // TweenMax.to(this.DOM.el, 1, {
+  //     scale: 1.2
+  // });
+  if( this.animation === 'parallax' ){
+      // init parallax on move
+      console.log("parallaxing");
+      var pVal = mapRange(amount, -500, 500, -50, 50);
+      TweenMax.to(this.DOM.el, 1, {
+          x: '+=' + pVal
+      });
+  } else if ( this.animation === 'scale' ){
+      TweenMax.to(this.DOM.el, 1, {
+          scale: 1.2
+      });
+  } else if ( this.animation === 'opacity' ){
+      TweenMax.to(this.DOM.el, 1, {
+          opacity: 1
+      });
+  }
+};
+
+module.exports = XPR_HorScrollItem;
+
+},{}],9:[function(require,module,exports){
+
+// A Manager for Swipe Events
+// Use as:
+// var SwipeManager = require( 'swipemanager.js' );
+// SwipeManager.swipeDetect( el, callback, kill );
+// el is the DOM el on which you want to track swipes
+// callback is a custom function to manage the data SM returns
+// setting kill to true removes the event listeners.
+
+// add more refined functions to differentiate between types of swipes
+
+var elapsedTime;
+var startTime;
+
+var swipedir; // direction of the swipe
+var startX;
+var startY;
+var distX; // distance traveled horizontally
+var distY; // distance traveled vertically
+
+// adjust those to track types of swipes
+var threshold = 150; // required min distance traveled to be considered swipe
+var restraint = 100; // maximum distance allowed at the same time in perpendicular direction
+var allowedTime = 300; // maximum time allowed to travel that distance
+
+var tempf; // storing the bind function for touchend
+
+var swipeFuncs = {
+  // touch start
+  ts : function(e){
+    var touchobj = e.changedTouches[0];
+    swipedir = 'none';
+    dist = 0;
+    startX = touchobj.pageX;
+    startY = touchobj.pageY;
+    startTime = new Date().getTime(); // record time when finger first makes contact with surface
+    e.preventDefault();
+  },
+  tm : function(e){
+    e.preventDefault();
+  },
+  te_horizontal : function(handleswipe){
+    var touchobj = event.changedTouches[0];
+    distX = touchobj.pageX - startX; // get horizontal dist traveled by finger while in contact with surface
+    distY = touchobj.pageY - startY; // get vertical dist traveled by finger while in contact with surface
+    elapsedTime = new Date().getTime() - startTime; // get time elapsed
+
+    if (Math.abs(distX) >= threshold && Math.abs(distY) <= restraint) { // 2nd condition for horizontal swipe met
+      swipedir = (distX < 0) ? 'left' : 'right'; // if dist traveled is negative, it indicates left swipe
+    } else if (Math.abs(distY) >= threshold && Math.abs(distX) <= restraint) { // 2nd condition for vertical swipe met
+      console.log('down!');
+      swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
+    }
+    console.log("handling it");
+    handleswipe(swipedir, distX, distY);
+    event.preventDefault();
+  }
+};
+
+var touchsurface;
+var handleswipe;
+
+module.exports = {
+
+  detectSwipe : function(el, kill, callback) {
+    // everytime this function is called the tm, ts, te are created anew,
+    // so event listeners don't work, as for them
+    // it's two different functions.
+    touchsurface = el;
+    handleswipe = callback || function (swipedir, dx, dy) {};
+    console.log("kill", kill);
+    // we need to pass a few things to the event listeners
+    // handleswipe
+    if( kill!==true ) {
+      // A new function reference is created after .bind() is called!
+      // Storing it in a variable makes it accessible for the removeEventListener method
+      console.log("kill not");
+      tempf = swipeFuncs.te_horizontal.bind(null, handleswipe);
+      touchsurface.addEventListener('touchstart', swipeFuncs.ts, false);
+      touchsurface.addEventListener('touchmove', swipeFuncs.tm, false);
+      touchsurface.addEventListener('touchend', tempf, false);
+    } else {
+      console.log("kill event listeners");
+      touchsurface.removeEventListener('touchstart', swipeFuncs.ts, false);
+      touchsurface.removeEventListener('touchmove', swipeFuncs.tm, false);
+      console.log(tempf);
+      touchsurface.removeEventListener('touchend', tempf, false);
+    }
+
+  }
+
+};
+
+
+
+},{}]},{},[6]);
