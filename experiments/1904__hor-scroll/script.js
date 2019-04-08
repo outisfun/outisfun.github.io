@@ -13337,6 +13337,8 @@ function XPR_ScrollerHor(el, controller){
 
   this.fixViewport = true;
 
+  this.enableDebugger = true;
+
   this.els = [];
 
   var self = this;
@@ -13344,14 +13346,12 @@ function XPR_ScrollerHor(el, controller){
       self.els.push( new XPR_ScrollerHorItem(el) );
   });
 
-  // bounds for how much you can swipe left and right
   this.DOM.bounds = { max: 0, min: -(this.DOM.scenesContainer.offsetWidth - ww) };
 
   this.init();
 }
 
 XPR_ScrollerHor.prototype.init = function(){
-
     var self = this;
     this.scrollScene = new ScrollMagic.Scene({
       triggerElement: this.DOM.el,
@@ -13369,8 +13369,9 @@ XPR_ScrollerHor.prototype.init = function(){
 };
 
 XPR_ScrollerHor.prototype.debugger = function(msg){
-  console.log("debugger");
-  this.DOM.debugger.innerHTML += msg + "<br>";
+  if( this.enableDebugger ){
+    this.DOM.debugger.innerHTML += msg + "<br>";
+  }
 };
 
 XPR_ScrollerHor.prototype.initSwipeManager = function(){
@@ -13391,8 +13392,6 @@ XPR_ScrollerHor.prototype.initSwipeManager = function(){
     self.debugger("direction: " + swipedir + " amount: " + amount );
   });
 };
-
-
 
 XPR_ScrollerHor.prototype.exit = function( dir ){
     var self = this;
@@ -13428,6 +13427,7 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount){
   var self = this;
   camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos));
   this.pos += camount;
+  this.debugger("position: " + this.pos);
   TweenMax.to( this.DOM.scenesContainer, 1.2, {
       x: "+=" + camount,
       ease: Power3.easeOut,

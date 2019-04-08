@@ -1364,6 +1364,7 @@ html {
   padding: 5px;
   z-index: 30;
   opacity: 0.3;
+  pointer-events: none;
 }
 
 /*# sourceMappingURL=style.css.map */
