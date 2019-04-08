@@ -13360,10 +13360,9 @@ XPR_ScrollerHor.prototype.init = function(){
               duration: this.DOM.el.offsetHeight
     })
       .on( 'start', function() {
-        console.log('start', self.fixViewport);
         if( self.fixViewport === true ) {
-          self.DOM.inner.classList.add('is--fixed'); // !!! 1. FIX ELEMENT.
-          self.DOM.navSideways.classList.add( 'is--visible' );
+          self.DOM.inner.classList.add('is--fixed');
+          self.manageNav( false, false, true );
           self.initSwipeManager();
         }
       })
@@ -13371,13 +13370,14 @@ XPR_ScrollerHor.prototype.init = function(){
 };
 
 XPR_ScrollerHor.prototype.debugger = function(msg){
-  console.log(msg);
   this.DOM.debugger.innerHTML = msg;
 };
 
 XPR_ScrollerHor.prototype.initSwipeManager = function(){
   var self = this;
+  // setting 2nd var to true would remove event listeners
   SwipeManager.detectSwipe( this.DOM.inner, false, function(swipedir, dx, dy) {
+    console.log("HR.js: swipe callback");
     var amount = mapRange(dx, -500, 500, -window.innerWidth, window.innerWidth);
     // check if exits are enabled and the gesture is right :)
     if( self.isSwipingUp && ( swipedir === 'down' ) ){
@@ -13385,41 +13385,22 @@ XPR_ScrollerHor.prototype.initSwipeManager = function(){
     } else if( self.isSwipingDown && ( swipedir === 'up' ) ){
         self.exit( 'down' );
     } else {
-        // else we don't care about swipedir per se, amount explains it
         self.navigate( swipedir, amount );
     }
     self.debugger("direction: " + swipedir + " amount: " + amount );
   });
 };
 
-XPR_ScrollerHor.prototype.manageNav = function(up, down, side){
-  if( up === true ){
-    this.isSwipingUp = true;
-    this.DOM.navUp.classList.add( 'is--visible' );
-  } else {
-    this.isSwipingUp = false;
-    this.DOM.navUp.classList.remove( 'is--visible' );
-  }
-  if( down === true ){
-    this.isSwipingDown = true;
-    this.DOM.navDown.classList.add( 'is--visible' );
-  } else {
-    this.isSwipingDown = false;
-    this.DOM.navDown.classList.remove( 'is--visible' );
-  }
-};
+
 
 XPR_ScrollerHor.prototype.exit = function( dir ){
-
     var self = this;
-
-    // remove scene until things have been cleared
     this.fixViewport = false;
     // remove event listeners
     SwipeManager.detectSwipe( this.DOM.inner, true, function(){
-      console.log( "killed event listeners" );
-    } );
-    // reset to initial scroll pos
+      console.log( "HS.js: removed event listeners" );
+    });
+    // reset to initial scroll pos before removing fixed el to avoid jumps
     this.controller.scrollTo(this.DOM.el.offsetTop);
     setTimeout(function(){
       self.DOM.inner.classList.remove( 'is--fixed' );
@@ -13481,6 +13462,26 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount){
     }
   });
 
+};
+
+XPR_ScrollerHor.prototype.manageNav = function(up, down, side){
+  if( up === true ){
+    this.isSwipingUp = true;
+    this.DOM.navUp.classList.add( 'is--visible' );
+  } else {
+    this.isSwipingUp = false;
+    this.DOM.navUp.classList.remove( 'is--visible' );
+  }
+  if( down === true ){
+    this.isSwipingDown = true;
+    this.DOM.navDown.classList.add( 'is--visible' );
+  } else {
+    this.isSwipingDown = false;
+    this.DOM.navDown.classList.remove( 'is--visible' );
+  }
+  if( side === true ){
+    this.DOM.navSideways.classList.add( 'is--visible' );
+  }
 };
 
 
@@ -13581,10 +13582,13 @@ var restraint = 100; // maximum distance allowed at the same time in perpendicul
 var allowedTime = 300; // maximum time allowed to travel that distance
 
 var tempf; // storing the bind function for touchend
+var touchsurface;
+var handleswipe;
 
 var swipeFuncs = {
   // touch start
   ts : function(e){
+    console.log("SM.js: touch start");
     var touchobj = e.changedTouches[0];
     swipedir = 'none';
     dist = 0;
@@ -13594,9 +13598,11 @@ var swipeFuncs = {
     e.preventDefault();
   },
   tm : function(e){
+    console.log("SM.js: touch move");
     e.preventDefault();
   },
   te_horizontal : function(handleswipe){
+    console.log("SM.js: touch end");
     var touchobj = event.changedTouches[0];
     distX = touchobj.pageX - startX; // get horizontal dist traveled by finger while in contact with surface
     distY = touchobj.pageY - startY; // get vertical dist traveled by finger while in contact with surface
@@ -13608,14 +13614,10 @@ var swipeFuncs = {
       console.log('down!');
       swipedir = (distY < 0) ? 'up' : 'down'; // if dist traveled is negative, it indicates up swipe
     }
-    console.log("handling it");
     handleswipe(swipedir, distX, distY);
     event.preventDefault();
   }
 };
-
-var touchsurface;
-var handleswipe;
 
 module.exports = {
 
@@ -13625,22 +13627,20 @@ module.exports = {
     // it's two different functions.
     touchsurface = el;
     handleswipe = callback || function (swipedir, dx, dy) {};
-    console.log("kill", kill);
     // we need to pass a few things to the event listeners
     // handleswipe
     if( kill!==true ) {
       // A new function reference is created after .bind() is called!
       // Storing it in a variable makes it accessible for the removeEventListener method
-      console.log("kill not");
+      console.log("SM.js: set listeners");
       tempf = swipeFuncs.te_horizontal.bind(null, handleswipe);
       touchsurface.addEventListener('touchstart', swipeFuncs.ts, false);
       touchsurface.addEventListener('touchmove', swipeFuncs.tm, false);
       touchsurface.addEventListener('touchend', tempf, false);
     } else {
-      console.log("kill event listeners");
+      console.log("SM.js: kill event listeners");
       touchsurface.removeEventListener('touchstart', swipeFuncs.ts, false);
       touchsurface.removeEventListener('touchmove', swipeFuncs.tm, false);
-      console.log(tempf);
       touchsurface.removeEventListener('touchend', tempf, false);
     }
 
