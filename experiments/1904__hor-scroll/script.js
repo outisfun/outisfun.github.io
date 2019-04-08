@@ -15997,10 +15997,9 @@ var clamp = function(val, min, max) {
 
 var scrollDir = true; // down is default
 var scrollPos = 0; // starts at 0
+
 var detectScrollPos = function(currentScrollPos){
   var temp = scrollPos;
-
-  console.log(scrollPos, currentScrollPos, document.body.getBoundingClientRect().top);
   scrollPos = currentScrollPos;
   return ((temp - currentScrollPos) < 0);
 };
@@ -16023,24 +16022,23 @@ function XPR_ScrollerHor(el, controller){
   this.canExitUp = true; //when we enter the page we can still swipe up to exit?
   this.canExitDown = false;
 
-  this.fixViewport = true;
+  this.hammerManager = new Hammer.Manager( this.DOM.inner );
+  this.swipe = new Hammer.Swipe(); // swipe event listener
 
+  this.fixViewport = true;
   this.isAnimating = false;
-  this.enableDebugger = true;
+
+  this.enableDebugger = false;
 
   this.els = [];
-
   var self = this;
   Array.from( this.DOM.el.querySelectorAll( ".xpr-el" ) ).forEach( function(el, ind) {
       self.els.push( new XPR_ScrollerHorItem(el) );
   });
 
   this.DOM.bounds = { max: 0, min: -(this.DOM.scenesContainer.offsetWidth - ww) };
-  this.init();
 
-  window.addEventListener('scroll', function(e) {
-    scrollDir = detectScrollPos(window.scrollY); // update scroll direction
-  });
+  this.init();
 }
 
 XPR_ScrollerHor.prototype.init = function(){
@@ -16060,9 +16058,12 @@ XPR_ScrollerHor.prototype.init = function(){
     })
     .addTo( this.controller );
 
-  this.hammerManager = new Hammer.Manager( this.DOM.inner );
-  this.swipe = new Hammer.Swipe(); // swipe event listener
+
   this.manageSwipes();
+
+  window.addEventListener('scroll', function(e) {
+    scrollDir = detectScrollPos(window.scrollY); // update scroll direction
+  });
 };
 
 XPR_ScrollerHor.prototype.debugger = function(msg){
@@ -16073,37 +16074,13 @@ XPR_ScrollerHor.prototype.debugger = function(msg){
 
 XPR_ScrollerHor.prototype.enterHorizontalMode = function( dir ){
   var self = this;
-  if( dir === 'top' ){
+  if( dir === 'top' ) {
     this.manageNav(true, false, true); // up and sideways
   } else {
     this.manageNav(false, true, false); // down and sideways
   }
   // Add the recognizer to the manager
-  this.hammerManager.add(this.swipe);
-};
-
-XPR_ScrollerHor.prototype.manageSwipes = function(){
-  var self = this;
-  this.hammerManager.on('swiperight', function(e) {
-    self.debugger( 'swipe right ' + e.deltaX );
-    self.navigate( 'right', e.deltaX );
-  });
-  this.hammerManager.on('swipeleft', function(e) {
-    self.debugger( 'swipe left ' + e.deltaX );
-    self.navigate( 'left', e.deltaX );
-  });
-  this.hammerManager.on('swipeup', function(e) {
-    self.debugger( 'swipe up' );
-    if( self.canExitDown ){
-      self.exit( 'down' );
-    }
-  });
-  this.hammerManager.on('swipedown', function(e) {
-    self.debugger( 'swipe down' );
-    if( self.canExitUp ){
-      self.exit( 'up' );
-    }
-  });
+  this.hammerManager.add( this.swipe );
 };
 
 XPR_ScrollerHor.prototype.exit = function( dir ){
@@ -16135,23 +16112,34 @@ XPR_ScrollerHor.prototype.exit = function( dir ){
 };
 
 XPR_ScrollerHor.prototype.navigate = function(dir, amount){
-  // bounds.max - this.pos > amount > bounds.min - this.pos
-  // so amount has to be clamped between those values
   if( !this.isAnimating ) {
-    this.isAnimating = true;
-    this.debugger("pos before: " + this.pos);
+
+    //this.isAnimating = true;
+
     var self = this;
-    camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos));
-    this.pos += camount;
-    this.debugger("pos after: " + this.pos);
-    if( self.pos >= (self.DOM.bounds.max - ww/4) ) {
-      self.manageNav(true, false, true);
-    } else if( self.pos <= (self.DOM.bounds.min + ww/4) ) {
-      self.manageNav(false, true, true);
+
+    // // alternative solution
+    // var dist = ( camount > 0 ) ? (ww) : (-ww);
+    // var cdist = clamp(dist, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos));
+    // TweenMax.to( this.DOM.scenesContainer, 0.75, {
+    //     x: "+=" + cdist,
+    //     ease: Power3.easeOut,
+    //     onComplete: function() {
+    //       self.isAnimating = false;
+    //     }
+    // });
+
+    if( this.pos >= (this.DOM.bounds.max - ww/4) ) {
+      this.manageNav(true, false, true);
+    } else if( this.pos <= (this.DOM.bounds.min + ww/4) ) {
+      this.manageNav(false, true, true);
     } else {
-      self.manageNav(false, false, true);
+      this.manageNav(false, false, true);
     }
-    TweenMax.to( this.DOM.scenesContainer, 1.2, {
+
+    camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
+    this.pos += camount;
+    TweenMax.to( this.DOM.scenesContainer, 0.75, {
         x: "+=" + camount,
         ease: Power3.easeOut,
         onComplete: function() {
@@ -16176,7 +16164,30 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount){
       }
     });
   }
+};
 
+XPR_ScrollerHor.prototype.manageSwipes = function(){
+  var self = this;
+  this.hammerManager.on('swiperight', function(e) {
+    self.debugger( 'swipe right ' + e.deltaX );
+    self.navigate( 'right', e.deltaX );
+  });
+  this.hammerManager.on('swipeleft', function(e) {
+    self.debugger( 'swipe left ' + e.deltaX );
+    self.navigate( 'left', e.deltaX );
+  });
+  this.hammerManager.on('swipeup', function(e) {
+    self.debugger( 'swipe up' );
+    if( self.canExitDown ){
+      self.exit( 'down' );
+    }
+  });
+  this.hammerManager.on('swipedown', function(e) {
+    self.debugger( 'swipe down' );
+    if( self.canExitUp ){
+      self.exit( 'up' );
+    }
+  });
 };
 
 XPR_ScrollerHor.prototype.manageNav = function(up, down, side){
