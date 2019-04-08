@@ -15984,6 +15984,8 @@ var wh = window.innerHeight;
 var deltaX = 0;
 var deltaY = 0;
 
+window.onbeforeunload = function(){ window.scrollTo(0,0); };
+
 // TO DO: Put into helpers func folder
 var mapRange = function(num, in_min, in_max, out_min, out_max)  {
     return (num - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
@@ -15991,6 +15993,16 @@ var mapRange = function(num, in_min, in_max, out_min, out_max)  {
 
 var clamp = function(val, min, max) {
     return Math.min(Math.max(min, val), max);
+};
+
+var scrollDir = true; // down is default
+var scrollPos = 0; // starts at 0
+var detectScrollPos = function(currentScrollPos){
+  var temp = scrollPos;
+
+  console.log(scrollPos, currentScrollPos, document.body.getBoundingClientRect().top);
+  scrollPos = currentScrollPos;
+  return ((temp - currentScrollPos) < 0);
 };
 
 function XPR_ScrollerHor(el, controller){
@@ -16008,14 +16020,12 @@ function XPR_ScrollerHor(el, controller){
   this.DOM.debugger = document.querySelector( ".xpr-debug span" );
 
   this.pos = deltaX; // starts at 0. track transladsdstes
-  this.isSwiping = false;
-  this.isSwipingUp = true; //when we enter the page we can still swipe up to exit?
-  this.isSwipingDown = true;
-
-  this.hammerManager = new Hammer.Manager( this.DOM.inner );
-  this.swipe = new Hammer.Swipe(); // swipe event listener
+  this.canExitUp = true; //when we enter the page we can still swipe up to exit?
+  this.canExitDown = false;
 
   this.fixViewport = true;
+
+  this.isAnimating = false;
   this.enableDebugger = true;
 
   this.els = [];
@@ -16027,23 +16037,32 @@ function XPR_ScrollerHor(el, controller){
 
   this.DOM.bounds = { max: 0, min: -(this.DOM.scenesContainer.offsetWidth - ww) };
   this.init();
+
+  window.addEventListener('scroll', function(e) {
+    scrollDir = detectScrollPos(window.scrollY); // update scroll direction
+  });
 }
 
 XPR_ScrollerHor.prototype.init = function(){
-    var self = this;
-    this.scrollScene = new ScrollMagic.Scene({
-      triggerElement: this.DOM.el,
-      triggerHook: 0,
-      duration: this.DOM.el.offsetHeight
+  var self = this;
+  this.scrollScene = new ScrollMagic.Scene({
+    triggerElement: this.DOM.el,
+    triggerHook: 0,
+    duration: this.DOM.el.offsetHeight
+  })
+    .on( 'start', function() {
+      // check if it was entered from top
+      if( self.fixViewport === true ){
+        self.DOM.inner.classList.add( 'is--fixed' );
+        self.enterHorizontalMode( ( scrollDir ) ? 'top' : 'bottom' );
+        self.fixViewport = false; // don't trigger more than once
+      }
     })
-      .on( 'start', function() {
-        if( self.fixViewport === true ) {
-          self.DOM.inner.classList.add( 'is--fixed' );
-          self.manageNav( true, false, true );
-          self.enterHorizontalMode();
-        }
-      })
-      .addTo( this.controller );
+    .addTo( this.controller );
+
+  this.hammerManager = new Hammer.Manager( this.DOM.inner );
+  this.swipe = new Hammer.Swipe(); // swipe event listener
+  this.manageSwipes();
 };
 
 XPR_ScrollerHor.prototype.debugger = function(msg){
@@ -16052,11 +16071,19 @@ XPR_ScrollerHor.prototype.debugger = function(msg){
   }
 };
 
-XPR_ScrollerHor.prototype.enterHorizontalMode = function(){
-
+XPR_ScrollerHor.prototype.enterHorizontalMode = function( dir ){
   var self = this;
+  if( dir === 'top' ){
+    this.manageNav(true, false, true); // up and sideways
+  } else {
+    this.manageNav(false, true, false); // down and sideways
+  }
   // Add the recognizer to the manager
   this.hammerManager.add(this.swipe);
+};
+
+XPR_ScrollerHor.prototype.manageSwipes = function(){
+  var self = this;
   this.hammerManager.on('swiperight', function(e) {
     self.debugger( 'swipe right ' + e.deltaX );
     self.navigate( 'right', e.deltaX );
@@ -16067,27 +16094,28 @@ XPR_ScrollerHor.prototype.enterHorizontalMode = function(){
   });
   this.hammerManager.on('swipeup', function(e) {
     self.debugger( 'swipe up' );
-    if( self.isSwipingDown ){
+    if( self.canExitDown ){
       self.exit( 'down' );
     }
   });
   this.hammerManager.on('swipedown', function(e) {
     self.debugger( 'swipe down' );
-    if( self.isSwipingUp ){
+    if( self.canExitUp ){
       self.exit( 'up' );
     }
   });
 };
 
 XPR_ScrollerHor.prototype.exit = function( dir ){
+    // if you're exiting
     var self = this;
-    this.fixViewport = false;
     this.hammerManager.remove(this.swipe);
 
     // reset to initial scroll pos before removing fixed el to avoid jumps
     this.controller.scrollTo(this.DOM.el.offsetTop);
     setTimeout(function(){
       self.DOM.inner.classList.remove( 'is--fixed' );
+      self.manageNav( false, false, false );
     }, 300);
 
     // inparallel, scroll window
@@ -16109,60 +16137,61 @@ XPR_ScrollerHor.prototype.exit = function( dir ){
 XPR_ScrollerHor.prototype.navigate = function(dir, amount){
   // bounds.max - this.pos > amount > bounds.min - this.pos
   // so amount has to be clamped between those values
-  this.debugger("pos before: " + this.pos);
-  var self = this;
-  camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos));
-  this.pos += camount;
-  this.debugger("pos after: " + this.pos);
-  TweenMax.to( this.DOM.scenesContainer, 1.2, {
-      x: "+=" + camount,
-      ease: Power3.easeOut,
-      onComplete: function() {
-        // check if it is in the beginning or the end
-        if( self.pos >= (self.DOM.bounds.max - wh/2) ) {
-          self.manageNav(true, true);
-        } else if( self.pos <= (self.DOM.bounds.min + wh/2) ) {
-          self.manageNav(true, true);
-        } else {
-          // both are false
-          self.manageNav(true, true);
+  if( !this.isAnimating ) {
+    this.isAnimating = true;
+    this.debugger("pos before: " + this.pos);
+    var self = this;
+    camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos));
+    this.pos += camount;
+    this.debugger("pos after: " + this.pos);
+    if( self.pos >= (self.DOM.bounds.max - ww/4) ) {
+      self.manageNav(true, false, true);
+    } else if( self.pos <= (self.DOM.bounds.min + ww/4) ) {
+      self.manageNav(false, true, true);
+    } else {
+      self.manageNav(false, false, true);
+    }
+    TweenMax.to( this.DOM.scenesContainer, 1.2, {
+        x: "+=" + camount,
+        ease: Power3.easeOut,
+        onComplete: function() {
+          self.isAnimating = false;
+        }
+    });
+    self.els.forEach( function(el, ind) {
+      // if it's in the viewport, animate by default
+      if( el.isInViewport ){
+        el.animate( amount );
+        // if it woud disappear, then set to false.
+        if(!el.willBeInViewport( amount )) {
+          el.isInViewport = false;
+        }
+      } else {
+        // check if the element would be in the viewport after the translation! (not their current position)
+        // so it can enter animating
+        if( el.willBeInViewport(amount) ) {
+          el.animate( amount );
+          el.isInViewport = true;
         }
       }
-  });
-
-  self.els.forEach( function(el, ind) {
-     // if it's in the viewport, animate by default
-    if( el.isInViewport ){
-      el.animate( amount );
-      // if it woud disappear, then set to false.
-      if(!el.willBeInViewport( amount )) {
-        el.isInViewport = false;
-      }
-    } else {
-      // check if the element would be in the viewport after the translation! (not their current position)
-      // so it can enter animating
-      if( el.willBeInViewport(amount) ) {
-        el.animate( amount );
-        el.isInViewport = true;
-      }
-    }
-  });
+    });
+  }
 
 };
 
 XPR_ScrollerHor.prototype.manageNav = function(up, down, side){
   if( up === true ){
-    this.isSwipingUp = true;
+    this.canExitUp = true;
     this.DOM.navUp.classList.add( 'is--visible' );
   } else {
-    this.isSwipingUp = false;
+    this.canExitUp = false;
     this.DOM.navUp.classList.remove( 'is--visible' );
   }
   if( down === true ){
-    this.isSwipingDown = true;
+    this.canExitDown = true;
     this.DOM.navDown.classList.add( 'is--visible' );
   } else {
-    this.isSwipingDown = false;
+    this.canExitDown = false;
     this.DOM.navDown.classList.remove( 'is--visible' );
   }
   if( side === true ){
