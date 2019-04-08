@@ -13299,7 +13299,6 @@ require('scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap');
 var gsap = require('gsap');
 //require('gsap/ScrollToPlugin');
 require( 'gsap/src/uncompressed/plugins/ScrollToPlugin.js'﻿ );
-console.log(ScrollToPlugin); // ???? dafuq.
 
 var SwipeManager = require( 'swipemanager.js' ); // manages and returns data about swipe events. mobile only!
 var XPR_ScrollerHorItem = require( 'el_horscroll_item.js' ); // manages and returns data about swipe events. mobile only!
@@ -13355,9 +13354,9 @@ XPR_ScrollerHor.prototype.init = function(){
 
     var self = this;
     this.scrollScene = new ScrollMagic.Scene({
-              triggerElement: this.DOM.el,
-              triggerHook: 0,
-              duration: this.DOM.el.offsetHeight
+      triggerElement: this.DOM.el,
+      triggerHook: 0,
+      duration: this.DOM.el.offsetHeight
     })
       .on( 'start', function() {
         if( self.fixViewport === true ) {
@@ -13370,14 +13369,16 @@ XPR_ScrollerHor.prototype.init = function(){
 };
 
 XPR_ScrollerHor.prototype.debugger = function(msg){
-  this.DOM.debugger.innerHTML = msg;
+  console.log("debugger");
+  this.DOM.debugger.innerHTML += msg + "<br>";
 };
 
 XPR_ScrollerHor.prototype.initSwipeManager = function(){
   var self = this;
+  self.debugger("HR.js: set listeners");
   // setting 2nd var to true would remove event listeners
   SwipeManager.detectSwipe( this.DOM.inner, false, function(swipedir, dx, dy) {
-    console.log("HR.js: swipe callback");
+    self.debugger("HR.js: swipe callback");
     var amount = mapRange(dx, -500, 500, -window.innerWidth, window.innerWidth);
     // check if exits are enabled and the gesture is right :)
     if( self.isSwipingUp && ( swipedir === 'down' ) ){
@@ -13398,7 +13399,6 @@ XPR_ScrollerHor.prototype.exit = function( dir ){
     this.fixViewport = false;
     // remove event listeners
     SwipeManager.detectSwipe( this.DOM.inner, true, function(){
-      console.log( "HS.js: removed event listeners" );
     });
     // reset to initial scroll pos before removing fixed el to avoid jumps
     this.controller.scrollTo(this.DOM.el.offsetTop);
