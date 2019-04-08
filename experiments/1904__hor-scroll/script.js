@@ -13317,20 +13317,18 @@ var clamp = function(val, min, max) {
 };
 
 function XPR_ScrollerHor(el, controller){
+
   this.DOM = {el: el};
   this.controller = controller;
-
-  var self = this;
-
   this.DOM.inner = this.DOM.el.querySelector( ".xpr-horscroll--inner" );
   this.DOM.scenesContainer = this.DOM.el.querySelector( ".xpr-horscroll__scenes" );
   this.DOM.scenes = Array.from( this.DOM.inner.querySelectorAll( ".xpr-horscroll__scene" ) );
   this.DOM.steps = Array.from( this.DOM.el.querySelectorAll( ".xpr-horscroll__step" ) );
-
   this.DOM.nav = this.DOM.el.querySelector( ".xpr-horscroll__nav" );
   this.DOM.navSideways = this.DOM.nav.querySelector( ".xpr-horscroll__nav__sideways" );
   this.DOM.navUp = this.DOM.nav.querySelector( ".xpr-horscroll__nav__up" );
   this.DOM.navDown = this.DOM.nav.querySelector( ".xpr-horscroll__nav__down" );
+  this.DOM.debugger = document.querySelector( ".xpr-debug span" );
 
   this.currentScene = 0;
   this.pos = 0; // starts at 0. track translates
@@ -13342,6 +13340,7 @@ function XPR_ScrollerHor(el, controller){
 
   this.els = [];
 
+  var self = this;
   Array.from( this.DOM.el.querySelectorAll( ".xpr-el" ) ).forEach( function(el, ind) {
       self.els.push( new XPR_ScrollerHorItem(el) );
   });
@@ -13360,21 +13359,25 @@ XPR_ScrollerHor.prototype.init = function(){
               triggerHook: 0,
               duration: this.DOM.el.offsetHeight
     })
-        .on( 'start', function() {
-          console.log('start', self.fixViewport);
-          if( self.fixViewport === true ) {
-            self.DOM.inner.classList.add('is--fixed'); // !!! 1. FIX ELEMENT.
-            self.DOM.navSideways.classList.add( 'is--visible' );
-            self.initSwipeManager();
-          }
-        })
-        .addTo( this.controller );
+      .on( 'start', function() {
+        console.log('start', self.fixViewport);
+        if( self.fixViewport === true ) {
+          self.DOM.inner.classList.add('is--fixed'); // !!! 1. FIX ELEMENT.
+          self.DOM.navSideways.classList.add( 'is--visible' );
+          self.initSwipeManager();
+        }
+      })
+      .addTo( this.controller );
+};
+
+XPR_ScrollerHor.prototype.debugger = function(msg){
+  console.log(msg);
+  this.DOM.debugger.innerHTML = msg;
 };
 
 XPR_ScrollerHor.prototype.initSwipeManager = function(){
   var self = this;
   SwipeManager.detectSwipe( this.DOM.inner, false, function(swipedir, dx, dy) {
-    var dir = swipedir; //(dx < 0) ? 'next' : 'prev';
     var amount = mapRange(dx, -500, 500, -window.innerWidth, window.innerWidth);
     // check if exits are enabled and the gesture is right :)
     if( self.isSwipingUp && ( swipedir === 'down' ) ){
@@ -13383,8 +13386,9 @@ XPR_ScrollerHor.prototype.initSwipeManager = function(){
         self.exit( 'down' );
     } else {
         // else we don't care about swipedir per se, amount explains it
-        self.navigate( dir, amount );
+        self.navigate( swipedir, amount );
     }
+    self.debugger("direction: " + swipedir + " amount: " + amount );
   });
 };
 
