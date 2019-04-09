@@ -19154,7 +19154,7 @@ var valPrev = 0;
 
 XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
 
-  console.log("amount", amount, "pos ", this.pos);
+  //console.log("amount", amount, "pos ", this.pos);
   //var self = this;
   if( (this.pos >= (this.DOM.bounds.max - ww/4)) && (dir === 'right') ) {
     this.nav.update( true, false, true );
@@ -19187,9 +19187,12 @@ function getValue (tween) {
         }
     });
   } else if( type === 'pan' ){
+    //camount = mapRange(amount, )
     camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
+    var ramount = mapRange(camount, -window.innerWidth, window.innerWidth, -100, 100);
+    console.log("ramount", ramount);
     var t = TweenMax.to( this.DOM.scenesContainer, 1, {
-        x: "+=" +camount,
+        x: "+=" +ramount,
         ease: Sine.easeOut,
         onUpdate: getValue,
         onUpdateParams:["{self}"],
