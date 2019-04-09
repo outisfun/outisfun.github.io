@@ -18905,6 +18905,17 @@ TextFx.prototype.init = function() {
 
 };
 
+  // a tweak to get updated values when panning
+  var valPrev = 0;
+  function getValue (tween) {
+    var valCurrent = tween.target._gsTransform.x; // current
+    var temp = valPrev;
+    valPrev = valCurrent;
+    var valDelta = (valCurrent - temp);
+    //self.pos -= valDelta;
+    //console.log("vals", valCurrent);
+  }
+
 TextFx.prototype.animate = function(direction, effect, callback) {
     // TweenMax.staggerTo(this.DOM.heading.querySelectorAll("span"), 1,
     //     {x:-20},
@@ -18988,7 +18999,9 @@ var wh = window.innerHeight;
 var deltaX = 0;
 var deltaY = 0;
 
-
+var lastPosX = 0;
+var lastPosY = 0;
+var isDragging = false;
 
 // TO DO: Put into helpers func folder
 var mapRange = function(num, in_min, in_max, out_min, out_max)  {
@@ -19024,10 +19037,11 @@ function XPR_ScrollerHor(el, controller){
 
   this.DOM.debugger = document.querySelector( ".xpr-debug span" );
 
-  this.pos = deltaX; // starts at 0.
+  this.pos = 0; // starts at 0.
 
   this.hammerManager = new Hammer.Manager( this.DOM.inner );
   this.swipe = new Hammer.Swipe(); // swipe event listener
+  this.pan = new Hammer.Pan({ direction: Hammer.DIRECTION_ALL, threshold: 0 }); // pan event listener
 
   this.scenesBgStartCM = new ColorManager( this.DOM.scenesBgStart, 'blue 0%', 'blue 100%'); // set initial colors
   this.scenesBgEndCM = new ColorManager( this.DOM.scenesBgEnd, 'black 45%', 'blue 100%');
@@ -19079,16 +19093,20 @@ XPR_ScrollerHor.prototype.debugger = function(msg){
 };
 
 XPR_ScrollerHor.prototype.enterHorizontalMode = function( dir ){
+
   var self = this;
+
   if( dir === 'top' ) {
-    this.nav.update( true, false, true );
+    this.nav.update( false, false, true );
     self.scenesBgStartCM.step('blue', 'black 65%');
   } else {
     this.nav.update( false, true, false );
     self.scenesBgEndCM.step('black 45%', 'blue 100%');
   }
+
   // Add the recognizer to the manager
   this.hammerManager.add( this.swipe );
+  this.hammerManager.add( this.pan );
 };
 
 
@@ -19098,6 +19116,7 @@ XPR_ScrollerHor.prototype.exit = function( dir ){
 
     // remove swipe listener
     this.hammerManager.remove(this.swipe);
+    this.hammerManager.remove(this.pan);
 
     //calculate scroll offset
     var offset = ( dir === 'up' ) ? ( -0.5*wh ) : ( 0.5*wh );
@@ -19130,38 +19149,66 @@ XPR_ScrollerHor.prototype.exit = function( dir ){
     });
 };
 
-XPR_ScrollerHor.prototype.navigate = function(dir, amount){
-  var self = this;
+var valPrev = 0;
 
-  if( this.pos >= (this.DOM.bounds.max - ww/4) ) {
+
+XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
+
+  console.log("amount", amount, "pos ", this.pos);
+  //var self = this;
+  if( (this.pos >= (this.DOM.bounds.max - ww/4)) && (dir === 'right') ) {
     this.nav.update( true, false, true );
-  } else if( this.pos <= (this.DOM.bounds.min + ww/4) ) {
+  } else if( (this.pos <= (this.DOM.bounds.min + ww/4)) && (dir === 'left') ) {
     this.nav.update( false, true, true );
   } else {
     this.nav.update( false, false, true );
   }
+  var self = this;
+  // a tweak to get updated values when panning
+function getValue (tween) {
+  var valCurrent = tween.target._gsTransform.x; // current
+  var temp = valPrev;
+  valPrev = valCurrent;
+  var valDelta = (valCurrent - temp);
+  self.pos += valDelta;
+  console.log("pos", self.pos);
+}
 
-  camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
-  this.pos += camount;
-  TweenMax.to( this.DOM.scenesContainer, 0.75, {
-      x: "+=" + camount,
-      ease: Power3.easeOut,
-      onComplete: function() {
-        self.isAnimating = false;
-      }
-  });
-  self.els.forEach( function(el, ind) {
+  if( type === 'swipe' ){
+    // if it's swipe
+    camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
+    this.pos += camount;
+
+    TweenMax.to( this.DOM.scenesContainer, 0.75, {
+        x: "+=" + camount,
+        ease: Power3.easeOut,
+        onComplete: function() {
+            //console.log("pos aft ", self.pos);
+        }
+    });
+  } else if( type === 'pan' ){
+    camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
+    var t = TweenMax.to( this.DOM.scenesContainer, 1, {
+        x: "+=" +camount,
+        ease: Sine.easeOut,
+        onUpdate: getValue,
+        onUpdateParams:["{self}"],
+        roundProps:"x",
+        onComplete: function() {
+          //console.log("pos aft ", self.pos);
+        }
+    });
+  }
+
+  this.els.forEach( function(el, ind) {
     // if it's in the viewport, animate by default
     if( el.isInViewport ){
       el.animate( amount );
-      // if it woud disappear, then set to false.
-      if(!el.willBeInViewport( amount )) {
+      if(!el.willBeInViewport( amount, dir )) {
         el.isInViewport = false;
       }
     } else {
-      // check if the element would be in the viewport after the translation! (not their current position)
-      // so it can enter animating
-      if( el.willBeInViewport(amount) ) {
+      if( el.willBeInViewport( amount, dir ) ) {
         el.animate( amount );
         el.isInViewport = true;
       }
@@ -19173,12 +19220,12 @@ XPR_ScrollerHor.prototype.manageSwipes = function(){
   var self = this;
   this.hammerManager.on('swiperight', function(e) {
     self.debugger( 'swipe right ' + e.deltaX );
-    self.navigate( 'right', e.deltaX );
+    self.navigate( 'right', e.deltaX, 'swipe' );
     self.nav.DOM.sideways.classList.remove( 'is--visible' );
   });
   this.hammerManager.on('swipeleft', function(e) {
     self.debugger( 'swipe left ' + e.deltaX );
-    self.navigate( 'left', e.deltaX );
+    self.navigate( 'left', e.deltaX, 'swipe' );
     self.nav.DOM.sideways.classList.remove( 'is--visible' );
   });
   this.hammerManager.on('swipeup', function(e) {
@@ -19191,6 +19238,28 @@ XPR_ScrollerHor.prototype.manageSwipes = function(){
     self.debugger( 'swipe down' );
     if( self.nav.canExitUp ){
       self.exit( 'up' );
+    }
+  });
+  this.hammerManager.on('pan', function(e) {
+    if ( ! isDragging ) {
+      isDragging = true;
+      //lastPosX = elem.offsetLeft;
+      //astPosY = elem.offsetTop;
+    }
+
+    // we simply need to determine where the x,y of this
+    // object is relative to where it's "last" known position is
+    // NOTE:
+    //    deltaX and deltaY are cumulative
+    // Thus we need to always calculate 'real x and y' relative
+    // to the "lastPosX/Y"
+    var posX = e.deltaX + lastPosX;
+    var posY = e.deltaY + lastPosY;
+
+    self.navigate( 'right', e.deltaX, 'pan' );
+    if (e.isFinal) {
+      isDragging = false;
+      console.log(" e complete", e.deltaX);
     }
   });
 };
@@ -19243,13 +19312,25 @@ XPR_HorScrollItem.prototype.init = function(){
     case 'letters':
       var options = {};
       this.letters = new Letters( self.DOM.el, options );
+      this.animRepeat = false;
+      break;
+    case 'parallax':
+      this.animRepeat = true;
+      break;
+    case 'fade-in':
+      this.animRepeat = false;
+      break;
   }
 };
 
 XPR_HorScrollItem.prototype.willBeInViewport = function( amount ){
   // rect.left > 0 && rect.left < window.innerWidth. amount takes in consideration the inited swipe
   //console.log(this.DOM.el, (this.DOM.el.getBoundingClientRect().left + amount), (this.DOM.el.getBoundingClientRect().left));
-  return ( ((this.DOM.el.getBoundingClientRect().left + amount) > 10) && ((this.DOM.el.getBoundingClientRect().left + amount) < (ww - 10)) );
+  if( this.animRepeat ) {
+    return ( ((this.DOM.el.getBoundingClientRect().left + amount) > 10) && ((this.DOM.el.getBoundingClientRect().left + amount) < (ww - 10)) );
+  } else {
+    return ( ((this.DOM.el.getBoundingClientRect().left + amount) < 0.6*ww) && ((this.DOM.el.getBoundingClientRect().left + amount) < (ww + 120)) );
+  }
 };
 
 XPR_HorScrollItem.prototype.animate = function( amount ){
