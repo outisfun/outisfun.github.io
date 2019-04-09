@@ -19043,7 +19043,7 @@ function XPR_ScrollerHor(el, controller){
   this.swipe = new Hammer.Swipe(); // swipe event listener
   this.pan = new Hammer.Pan({ direction: Hammer.DIRECTION_ALL, threshold: 0 }); // pan event listener
   this.swipe.recognizeWith(this.pan);
-  this.scenesBgStartCM = new ColorManager( this.DOM.scenesBgStart, 'blue 0%', 'blue 100%'); // set initial colors
+  this.scenesBgStartCM = new ColorManager( this.DOM.scenesBgStart, 'red 0%', 'blue 100%'); // set initial colors
   this.scenesBgEndCM = new ColorManager( this.DOM.scenesBgEnd, 'black 45%', 'blue 100%');
 
   this.fixViewport = true;
@@ -19056,7 +19056,7 @@ function XPR_ScrollerHor(el, controller){
   Array.from( this.DOM.el.querySelectorAll( ".xpr-el" ) ).forEach( function(el, ind) {
       self.els.push( new XPR_ScrollerHorItem(el) );
   });
-  console.log(this);
+  this.isSwiping = false;
   this.DOM.bounds = { max: 0, min: -(this.DOM.scenesContainer.offsetWidth - ww) };
 
   this.init();
@@ -19098,7 +19098,7 @@ XPR_ScrollerHor.prototype.enterHorizontalMode = function( dir ){
 
   if( dir === 'top' ) {
     this.nav.update( false, false, true );
-    self.scenesBgStartCM.step('blue', 'black 65%');
+    self.scenesBgStartCM.step('blue', 'red 65%');
   } else {
     this.nav.update( false, true, false );
     self.scenesBgEndCM.step('black 45%', 'blue 100%');
@@ -19165,45 +19165,49 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
   }
   var self = this;
   // a tweak to get updated values when panning
-function getValue (tween) {
-  var valCurrent = tween.target._gsTransform.x; // current
-  var temp = valPrev;
-  valPrev = valCurrent;
-  var valDelta = (valCurrent - temp);
-  self.pos += valDelta;
-  //console.log("pos", self.pos);
-}
+  function getValue (tween) {
+    var valCurrent = tween.target._gsTransform.x; // current
+    var temp = valPrev;
+    valPrev = valCurrent;
+    var valDelta = (valCurrent - temp);
+    self.pos += valDelta;
+    //console.log("pos", self.pos);
+  }
 
   if( type === 'swipe' ){
     // if it's swipe
     camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
     this.pos += camount;
     console.log("this is a swipe");
+    this.isSwiping = true;
     // disable pans :)
 
     TweenMax.to( this.DOM.scenesContainer, 0.75, {
         x: "+=" + camount,
         ease: Power3.easeOut,
         onComplete: function() {
-            //console.log("pos aft ", self.pos);
+          self.isSwiping = false;
         }
     });
   } else if( type === 'pan' ){
     //camount = mapRange(amount, )
-    console.log("this is a pan");
-    camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
-    var ramount = mapRange(camount, -window.innerWidth, window.innerWidth, -100, 100);
-    //console.log("ramount", ramount);
-    var t = TweenMax.to( this.DOM.scenesContainer, 1, {
-        x: "+=" +ramount,
-        ease: Sine.easeOut,
-        onUpdate: getValue,
-        onUpdateParams:["{self}"],
-        roundProps:"x",
-        onComplete: function() {
-          //console.log("pos aft ", self.pos);
-        }
-    });
+    if( !this.isSwiping ){
+      console.log("this is a pan");
+      camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
+      var ramount = mapRange(camount, -window.innerWidth, window.innerWidth, -100, 100);
+      //console.log("ramount", ramount);
+      var t = TweenMax.to( this.DOM.scenesContainer, 1, {
+          x: "+=" +ramount,
+          ease: Sine.easeOut,
+          onUpdate: getValue,
+          onUpdateParams:["{self}"],
+          roundProps:"x",
+          onComplete: function() {
+            //console.log("pos aft ", self.pos);
+          }
+      });
+    }
+
   }
 
   this.els.forEach( function(el, ind) {
