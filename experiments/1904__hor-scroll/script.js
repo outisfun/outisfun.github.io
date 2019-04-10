@@ -19021,6 +19021,13 @@ var detectScrollPos = function(currentScrollPos){
   return ((temp - currentScrollPos) < 0);
 };
 
+function getTranslateX(el) {
+  var style = window.getComputedStyle(el);
+  var matrix = new WebKitCSSMatrix(style.webkitTransform);
+  console.log('translateX: ', matrix.m41);
+  return matrix.m41;
+}
+
 function XPR_ScrollerHor(el, controller){
 
   this.DOM = {el: el};
@@ -19156,7 +19163,7 @@ var valPrev = 0;
 
 XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
 
-  //console.log("amount", amount, "pos ", this.pos);
+  console.log("pos ", this.pos);
   //var self = this;
   if( (this.pos >= (this.DOM.bounds.max - ww/4)) && (dir === 'right') ) {
     this.nav.update( true, false, true );
@@ -19165,6 +19172,7 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
   } else {
     this.nav.update( false, false, true );
   }
+
   var self = this;
   // a tweak to get updated values when panning
   function getValue (tween) {
@@ -19172,18 +19180,17 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
     var temp = valPrev;
     valPrev = valCurrent;
     var valDelta = (valCurrent - temp);
-    self.pos += valDelta;
-    //console.log("pos", self.pos);
+    // self.pos += valDelta;
   }
 
   if( type === 'swipe' ){
     if( this.panCount <= 15) {
       // avoid executing it in the end of a pan
       // if it's swipe
-      console.log("pan count", this.panCount);
+      //console.log("pan count", this.panCount);
       camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
-      this.pos += camount;
-      console.log("this is a swipe");
+      //this.pos += camount;
+      //console.log("this is a swipe");
       this.isSwiping = true;
       // disable pans :)
 
@@ -19192,6 +19199,7 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
           ease: Power3.easeOut,
           onComplete: function() {
             self.isSwiping = false;
+            self.pos = getTranslateX( self.DOM.scenesContainer );
           }
       });
     }
@@ -19199,7 +19207,6 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
   } else if( type === 'pan' ){
     //camount = mapRange(amount, )
     if( !this.isSwiping ){
-      console.log("this is a pan");
       camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
       var ramount = mapRange(camount, -window.innerWidth, window.innerWidth, -100, 100);
       //console.log("ramount", ramount);
@@ -19210,7 +19217,7 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
           onUpdateParams:["{self}"],
           roundProps:"x",
           onComplete: function() {
-            //console.log("pos aft ", self.pos);
+            self.pos = getTranslateX( self.DOM.scenesContainer );
           }
       });
     }
