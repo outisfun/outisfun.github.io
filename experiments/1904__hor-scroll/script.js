@@ -19024,7 +19024,7 @@ var detectScrollPos = function(currentScrollPos){
 function getTranslateX(el) {
   var style = window.getComputedStyle(el);
   var matrix = new WebKitCSSMatrix(style.webkitTransform);
-  console.log('translateX: ', matrix.m41);
+  // console.log('translateX: ', matrix.m41);
   return matrix.m41;
 }
 
@@ -19051,6 +19051,7 @@ function XPR_ScrollerHor(el, controller){
   this.pan = new Hammer.Pan({ direction: Hammer.DIRECTION_ALL, threshold: 0 }); // pan event listener
   this.swipe.recognizeWith(this.pan);
   this.isSwiping = false;
+  this.isPanning = false;
   this.panCount = 0;
 
   this.scenesBgStartCM = new ColorManager( this.DOM.scenesBgStart, 'blue 0%', 'blue 100%'); // set initial colors
@@ -19163,7 +19164,7 @@ var valPrev = 0;
 
 XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
 
-  console.log("pos ", this.pos);
+  //console.log("pos ", this.pos);
   //var self = this;
   if( (this.pos >= (this.DOM.bounds.max - ww/4)) && (dir === 'right') ) {
     this.nav.update( true, false, true );
@@ -19184,18 +19185,14 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
   }
 
   if( type === 'swipe' ){
+    console.log("swipe!");
     if( this.panCount <= 15) {
-      // avoid executing it in the end of a pan
-      // if it's swipe
-      //console.log("pan count", this.panCount);
       camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
-      //this.pos += camount;
-      //console.log("this is a swipe");
+      var namount = mapRange(camount, -window.innerWidth, window.innerWidth, -ww, ww);
       this.isSwiping = true;
-      // disable pans :)
-
+      console.log(namount);
       TweenMax.to( this.DOM.scenesContainer, 0.75, {
-          x: "+=" + camount,
+          x: "+=" + namount,
           ease: Power3.easeOut,
           onComplete: function() {
             self.isSwiping = false;
@@ -19213,9 +19210,6 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
       var t = TweenMax.to( this.DOM.scenesContainer, 1, {
           x: "+=" +ramount,
           ease: Sine.easeOut,
-          onUpdate: getValue,
-          onUpdateParams:["{self}"],
-          roundProps:"x",
           onComplete: function() {
             self.pos = getTranslateX( self.DOM.scenesContainer );
           }
@@ -19239,6 +19233,12 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
     }
   });
 };
+
+
+var pX;
+var lastpX;
+var delta = 0;
+var dir;
 
 XPR_ScrollerHor.prototype.manageSwipes = function(){
   var self = this;
@@ -19264,21 +19264,69 @@ XPR_ScrollerHor.prototype.manageSwipes = function(){
       self.exit( 'up' );
     }
   });
-  this.hammerManager.on('pan', function(e) {
+
+  var px,
+      lastpx;
+  this.hammerManager.on('panright', function(e) {
     if ( ! isDragging ) {
       isDragging = true;
       self.panCount = 0; // reset pan counts
     }
-    self.panCount += 1;
-    var posX = e.deltaX + lastPosX;
-    var posY = e.deltaY + lastPosY;
-    self.navigate( 'right', e.deltaX, 'pan' );
+
+    if( e.deltaTime > 0 ){
+      self.navigate( 'right', e.velocityX * 1000, 'pan' );
+      self.panCount += 1;
+      console.log(e.type, e.velocityX * 1000);
+    }
+
     if (e.isFinal) {
       isDragging = false;
-
-      console.log("pan complete", self.panCount, e.deltaX);
     }
   });
+
+  this.hammerManager.on('panleft', function(e) {
+    if ( ! isDragging ) {
+      isDragging = true;
+      self.panCount = 0; // reset pan counts
+    }
+
+    if( e.deltaTime > 0 ){
+      self.navigate( 'right', e.velocityX * 1000, 'pan' );
+      self.panCount += 1;
+      console.log(e.type, e.velocityX * 1000);
+    }
+
+    if (e.isFinal) {
+      isDragging = false;
+    }
+  });
+
+  // this.hammerManager.on('pan', function(e) {
+
+  //   if ( ! isDragging ) {
+  //     isDragging = true;
+  //     self.panCount = 0; // reset pan counts
+  //     lastpX = pX;
+  //     pX = e.center.x;
+  //     dir = (pX >= lastpX) ? 1 : -1;
+  //     console.log( " startss ", dir);
+  //   }
+
+  //   lastpX = pX;
+  //   pX = e.center.x;
+
+  //   if(Math.abs(pX - lastpX) >= 3){
+  //     dir = (pX >= lastpX) ? 1 : -1;
+  //     console.log(" decisive moment !", dir);
+  //   }
+  //   delta = dir*e.center.x;
+  //   self.navigate( 'right', delta, 'pan' );
+  //   //console.log( delta, pX, lastpX, );
+  //   if (e.isFinal) {
+  //     isDragging = false;
+  //     delta = 0;
+  //   }
+  // });
 };
 
 
