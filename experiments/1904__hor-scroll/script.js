@@ -18764,7 +18764,42 @@ if (typeof define === 'function' && define.amd) {
     // create a scrollerHor object
     var xprScrollerHor = new XPR_ScrollerHor( document.querySelector( ".xpr-horscroll" ), controller );
 
-    // at which point
+    var isfConsole = document.querySelector(".xpr-debug");
+
+    // Used to calculate mouse speed
+    var mouseDistance = function(x1, x2, y1, y2){
+        var a = x1 - x2;
+        var b = y1 - y2;
+        // hipotenuza :)
+        return Math.hypot(a,b);
+    };
+
+    function radToDeg(radians)
+    {
+      var pi = Math.PI;
+      return radians * (180/pi);
+    }
+
+    var isfLog = function(sp, msg){
+        console.log(( ".span-" + sp ));
+        isfConsole.querySelector( ".span-" + sp ).innerHTML = msg;
+    };
+    var simplifyGyroscope = function(ev) {
+        var gstring = ev.target.x.toFixed(4) + ' ' + ev.target.y.toFixed(4) + ' ' + ev.target.z.toFixed(4);
+        return gstring;
+    };
+    // Gyroscope
+    // The Gyroscope sensor measures angular velocity around device’s local X, Y, Z axes,
+    // in radians per second. The sensor’s readings are stored in the x, y, z properties,
+    // so we can output the data to the browser with the following code:
+    if ( 'Gyroscope' in window ) {
+        var gyroscope = new Gyroscope();
+        gyroscope.start();
+        gyroscope.addEventListener('reading', function(e) {
+            isfLog( 'gyr', simplifyGyroscope(e));
+            isfLog( 'deg', radToDeg(e.target.x).toFixed(1) + ' ' + radToDeg(e.target.y).toFixed(1) + ' ' + radToDeg(e.target.z).toFixed(1));
+        });
+    }
 
 })(window);
 
@@ -18996,11 +19031,6 @@ var ColorManager = require('colormanager.js'); // An object to manage gradient t
 var ww = window.innerWidth;
 var wh = window.innerHeight;
 
-var deltaX = 0;
-var deltaY = 0;
-
-var lastPosX = 0;
-var lastPosY = 0;
 var isDragging = false;
 
 // TO DO: Put into helpers func folder
@@ -19051,7 +19081,6 @@ function XPR_ScrollerHor(el, controller){
   this.pan = new Hammer.Pan({ direction: Hammer.DIRECTION_ALL, threshold: 0 }); // pan event listener
   this.swipe.recognizeWith(this.pan);
   this.isSwiping = false;
-  this.isPanning = false;
   this.panCount = 0;
 
   this.scenesBgStartCM = new ColorManager( this.DOM.scenesBgStart, 'blue 0%', 'blue 100%'); // set initial colors
@@ -19074,6 +19103,8 @@ function XPR_ScrollerHor(el, controller){
 }
 
 XPR_ScrollerHor.prototype.init = function(){
+
+  // add a scrollscene
   var self = this;
   this.scrollScene = new ScrollMagic.Scene({
     triggerElement: this.DOM.el,
@@ -19090,8 +19121,10 @@ XPR_ScrollerHor.prototype.init = function(){
     })
     .addTo( this.controller );
 
+  // init swipe manager
   this.manageSwipes();
 
+  // track scroll pos
   window.addEventListener('scroll', function(e) {
     scrollDir = detectScrollPos(window.scrollY); // update scroll direction
   });
@@ -19123,8 +19156,6 @@ XPR_ScrollerHor.prototype.enterHorizontalMode = function( dir ){
 
 XPR_ScrollerHor.prototype.exit = function( dir ){
 
-    var self = this;
-
     // remove swipe listener
     this.hammerManager.remove(this.swipe);
     this.hammerManager.remove(this.pan);
@@ -19134,10 +19165,12 @@ XPR_ScrollerHor.prototype.exit = function( dir ){
 
     // depending on which way you are exiting,
     // animate gradients
+    var self = this;
     if( dir === 'up' ){
       self.scenesBgStartCM.step('blue', 'blue');
     } else {
       self.scenesBgEndCM.step('blue 0%', 'blue 100%');
+      //document.querySelector( ".xpr-scene--4" ).classList.add( 'is--out' );
     }
 
     // reset to initial scroll pos before removing fixed el to avoid jumps
@@ -19154,179 +19187,140 @@ XPR_ScrollerHor.prototype.exit = function( dir ){
             }
           });
         }, 300);
-
       }
     });
 };
 
 var valPrev = 0;
 
-
 XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
 
-  //console.log("pos ", this.pos);
-  //var self = this;
-  if( (this.pos >= (this.DOM.bounds.max - ww/4)) && (dir === 'right') ) {
+  if( (this.pos >= (this.DOM.bounds.max - ww/10)) && (dir === 'left') ) {
     this.nav.update( true, false, true );
-  } else if( (this.pos <= (this.DOM.bounds.min + ww/4)) && (dir === 'left') ) {
-    this.nav.update( false, true, true );
+  } else if( (this.pos <= (this.DOM.bounds.min + ww/10)) && (dir === 'right') ) {
+    this.nav.update( false, true, false );
+    console.log("exit times");
   } else {
-    this.nav.update( false, false, true );
+    this.nav.update( false, false, false );
   }
 
+  this.pos = getTranslateX( this.DOM.scenesContainer ); // update position
+
+  var rangeBounds = (type === 'pan') ? [-100, 100] : [-ww, ww]; // you'd want panning to be tamer
+  var mapAmount = mapRange( amount, -window.innerWidth, window.innerWidth, rangeBounds[0], rangeBounds[1] );
+  var clampedAmount = clamp( mapAmount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos) ); // clamp to fit bounds
+
   var self = this;
-  // a tweak to get updated values when panning
+
   function getValue (tween) {
     var valCurrent = tween.target._gsTransform.x; // current
     var temp = valPrev;
     valPrev = valCurrent;
     var valDelta = (valCurrent - temp);
-    // self.pos += valDelta;
+    // TweenMax.set(document.querySelector(".xpr-el--1-1"), {
+    //   x: "+=" + valDelta/3)
+    // });
   }
 
   if( type === 'swipe' ){
     console.log("swipe!");
     if( this.panCount <= 15) {
-      camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
-      var namount = mapRange(camount, -window.innerWidth, window.innerWidth, -ww, ww);
       this.isSwiping = true;
-      console.log(namount);
-      TweenMax.to( this.DOM.scenesContainer, 0.75, {
-          x: "+=" + namount,
+      TweenMax.to( this.DOM.scenesContainer, 1, {
+          x: "+=" +clampedAmount,
           ease: Power3.easeOut,
+          onUpdate: getValue,
+          onUpdateParams:["{self}"],
+          roundProps:"x",
           onComplete: function() {
             self.isSwiping = false;
-            self.pos = getTranslateX( self.DOM.scenesContainer );
           }
       });
     }
-
   } else if( type === 'pan' ){
-    //camount = mapRange(amount, )
+    console.log("pan!");
     if( !this.isSwiping ){
-      camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
-      var ramount = mapRange(camount, -window.innerWidth, window.innerWidth, -100, 100);
-      //console.log("ramount", ramount);
       var t = TweenMax.to( this.DOM.scenesContainer, 1, {
-          x: "+=" +ramount,
+          x: "+=" +clampedAmount,
           ease: Sine.easeOut,
+          onUpdate: getValue,
+          onUpdateParams:["{self}"],
+          roundProps:"x",
           onComplete: function() {
-            self.pos = getTranslateX( self.DOM.scenesContainer );
+
           }
       });
     }
-
   }
 
-  this.els.forEach( function(el, ind) {
-    // if it's in the viewport, animate by default
+  self.animateElements( dir, clampedAmount, type );
+};
+
+XPR_ScrollerHor.prototype.animateElements = function( dir, amount, type ){
+  this.els.forEach( function(el, ind){
     if( el.isInViewport ){
       el.animate( amount );
       if(!el.willBeInViewport( amount, dir )) {
         el.isInViewport = false;
       }
     } else {
-      if( el.willBeInViewport( amount, dir ) ) {
+      if( el.willBeInViewport( amount, dir )) {
         el.animate( amount );
         el.isInViewport = true;
+        console.log(el);
       }
     }
   });
 };
 
-
-var pX;
-var lastpX;
-var delta = 0;
-var dir;
-
 XPR_ScrollerHor.prototype.manageSwipes = function(){
+
   var self = this;
-  this.hammerManager.on('swiperight', function(e) {
-    self.debugger( 'swipe right ' + e.deltaX );
-    self.navigate( 'right', e.deltaX, 'swipe' );
+
+  this.hammerManager.on('swiperight swipeleft', function(e) {
+    var dir;
+    if(e.type === 'swiperight'){
+      dir = 'left';
+    } else {
+      dir = 'right';
+    }
     self.nav.DOM.sideways.classList.remove( 'is--visible' );
+    self.navigate( dir, e.deltaX, 'swipe' );
+
   });
-  this.hammerManager.on('swipeleft', function(e) {
-    self.debugger( 'swipe left ' + e.deltaX );
-    self.navigate( 'left', e.deltaX, 'swipe' );
-    self.nav.DOM.sideways.classList.remove( 'is--visible' );
-  });
+
   this.hammerManager.on('swipeup', function(e) {
-    self.debugger( 'swipe up' );
     if( self.nav.canExitDown ){
       self.exit( 'down' );
     }
   });
+
   this.hammerManager.on('swipedown', function(e) {
-    self.debugger( 'swipe down' );
     if( self.nav.canExitUp ){
       self.exit( 'up' );
     }
   });
 
-  var px,
-      lastpx;
-  this.hammerManager.on('panright', function(e) {
+  this.hammerManager.on('panleft panright', function(e) {
     if ( ! isDragging ) {
       isDragging = true;
       self.panCount = 0; // reset pan counts
     }
 
-    if( e.deltaTime > 0 ){
-      self.navigate( 'right', e.velocityX * 1000, 'pan' );
-      self.panCount += 1;
-      console.log(e.type, e.velocityX * 1000);
+    var dir;
+    if(e.type === 'panright'){
+      dir = 'left';
+    } else {
+      dir = 'right';
     }
+    self.navigate( dir, e.velocityX * 1000, 'pan' );
+    self.panCount += 1;
 
     if (e.isFinal) {
       isDragging = false;
     }
   });
 
-  this.hammerManager.on('panleft', function(e) {
-    if ( ! isDragging ) {
-      isDragging = true;
-      self.panCount = 0; // reset pan counts
-    }
-
-    if( e.deltaTime > 0 ){
-      self.navigate( 'right', e.velocityX * 1000, 'pan' );
-      self.panCount += 1;
-      console.log(e.type, e.velocityX * 1000);
-    }
-
-    if (e.isFinal) {
-      isDragging = false;
-    }
-  });
-
-  // this.hammerManager.on('pan', function(e) {
-
-  //   if ( ! isDragging ) {
-  //     isDragging = true;
-  //     self.panCount = 0; // reset pan counts
-  //     lastpX = pX;
-  //     pX = e.center.x;
-  //     dir = (pX >= lastpX) ? 1 : -1;
-  //     console.log( " startss ", dir);
-  //   }
-
-  //   lastpX = pX;
-  //   pX = e.center.x;
-
-  //   if(Math.abs(pX - lastpX) >= 3){
-  //     dir = (pX >= lastpX) ? 1 : -1;
-  //     console.log(" decisive moment !", dir);
-  //   }
-  //   delta = dir*e.center.x;
-  //   self.navigate( 'right', delta, 'pan' );
-  //   //console.log( delta, pX, lastpX, );
-  //   if (e.isFinal) {
-  //     isDragging = false;
-  //     delta = 0;
-  //   }
-  // });
 };
 
 
@@ -19368,6 +19362,7 @@ function XPR_HorScrollItem(el){
   this.DOM = {el: el};
   this.animation = this.DOM.el.dataset.anim;
   this.inViewport = false;
+  this.animateOnce = false;
   this.init();
 }
 
@@ -19385,39 +19380,48 @@ XPR_HorScrollItem.prototype.init = function(){
     case 'fade-in':
       this.animRepeat = false;
       break;
+    case 'skew':
+      this.animRepeat = true;
+      break;
   }
 };
 
 XPR_HorScrollItem.prototype.willBeInViewport = function( amount ){
-  // rect.left > 0 && rect.left < window.innerWidth. amount takes in consideration the inited swipe
-  //console.log(this.DOM.el, (this.DOM.el.getBoundingClientRect().left + amount), (this.DOM.el.getBoundingClientRect().left));
+
   if( this.animRepeat ) {
     return ( ((this.DOM.el.getBoundingClientRect().left + amount) > 10) && ((this.DOM.el.getBoundingClientRect().left + amount) < (ww - 10)) );
   } else {
-    return ( ((this.DOM.el.getBoundingClientRect().left + amount) < 0.6*ww) && ((this.DOM.el.getBoundingClientRect().left + amount) < (ww + 120)) );
+    return ( ((this.DOM.el.getBoundingClientRect().left + amount) < 0.6*ww) );
   }
+
 };
 
 XPR_HorScrollItem.prototype.animate = function( amount ){
+  //console.log("this", this.DOM.el, this.inViewport);
+  if( !this.animateOnce ){
 
-  this.DOM.el.classList.add( "in--viewport" );
-  if( this.animation === 'parallax' ){
-      // init parallax on move
-      var pVal = mapRange(amount, -500, 500, -50, 50);
-      TweenMax.to(this.DOM.el, 1, {
-          x: '+=' + pVal
-      });
-  } else if ( this.animation === 'scale' ){
-      TweenMax.to(this.DOM.el, 1, {
-          scale: 1.2
-      });
-  } else if ( this.animation === 'opacity' ){
-      TweenMax.to(this.DOM.el, 1, {
-          opacity: 1
-      });
-  } else if( this.animation === 'letters' ){
-    this.letters.animate();
+    this.DOM.el.classList.add( "in--viewport" );
+
+    if( this.animation === 'parallax' ){
+        var pVal = mapRange(amount, -ww, ww, -60, 60);
+        TweenMax.set(this.DOM.el, {
+            x: pVal
+        });
+    } else if ( this.animation === 'scale' ){
+        TweenMax.to(this.DOM.el, 1, {
+            scale: 1.2
+        });
+    } else if ( this.animation === 'opacity' ){
+        TweenMax.to(this.DOM.el, 1, {
+            opacity: 1
+        });
+    } else if( this.animation === 'letters' ){
+      this.letters.animate();
+      console.log("letters animated");
+      this.animateOnce = true;
+    }
   }
+
 };
 
 module.exports = XPR_HorScrollItem;
@@ -19456,6 +19460,7 @@ XPR_HorScrollNav.prototype.update = function( up, down, side ){
     this.DOM.up.classList.remove( 'is--visible' );
   }
   if( down === true ){
+    console.log(" can exit down ");
     this.canExitDown = true;
     this.DOM.down.classList.add( 'is--visible' );
   } else {
@@ -19464,6 +19469,8 @@ XPR_HorScrollNav.prototype.update = function( up, down, side ){
   }
   if( side === true ){
     this.DOM.sideways.classList.add( 'is--visible' );
+  } else {
+    this.DOM.sideways.classList.remove( 'is--visible' );
   }
 };
 
