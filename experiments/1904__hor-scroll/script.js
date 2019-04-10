@@ -19043,7 +19043,10 @@ function XPR_ScrollerHor(el, controller){
   this.swipe = new Hammer.Swipe(); // swipe event listener
   this.pan = new Hammer.Pan({ direction: Hammer.DIRECTION_ALL, threshold: 0 }); // pan event listener
   this.swipe.recognizeWith(this.pan);
-  this.scenesBgStartCM = new ColorManager( this.DOM.scenesBgStart, 'red 0%', 'blue 100%'); // set initial colors
+  this.isSwiping = false;
+  this.panCount = 0;
+
+  this.scenesBgStartCM = new ColorManager( this.DOM.scenesBgStart, 'blue 0%', 'blue 100%'); // set initial colors
   this.scenesBgEndCM = new ColorManager( this.DOM.scenesBgEnd, 'black 45%', 'blue 100%');
 
   this.fixViewport = true;
@@ -19056,7 +19059,7 @@ function XPR_ScrollerHor(el, controller){
   Array.from( this.DOM.el.querySelectorAll( ".xpr-el" ) ).forEach( function(el, ind) {
       self.els.push( new XPR_ScrollerHorItem(el) );
   });
-  this.isSwiping = false;
+
   this.DOM.bounds = { max: 0, min: -(this.DOM.scenesContainer.offsetWidth - ww) };
 
   this.init();
@@ -19098,7 +19101,7 @@ XPR_ScrollerHor.prototype.enterHorizontalMode = function( dir ){
 
   if( dir === 'top' ) {
     this.nav.update( false, false, true );
-    self.scenesBgStartCM.step('blue', 'red 65%');
+    self.scenesBgStartCM.step('blue', 'black 65%');
   } else {
     this.nav.update( false, true, false );
     self.scenesBgEndCM.step('black 45%', 'blue 100%');
@@ -19136,7 +19139,6 @@ XPR_ScrollerHor.prototype.exit = function( dir ){
         setTimeout(function(){
           self.DOM.inner.classList.remove( 'is--fixed' );
           self.nav.update( false, false, false );
-
           animateScrollTo((self.DOM.el.offsetTop + offset), {
             speed: 1200,
             onComplete: function() {
@@ -19175,20 +19177,25 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
   }
 
   if( type === 'swipe' ){
-    // if it's swipe
-    camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
-    this.pos += camount;
-    console.log("this is a swipe");
-    this.isSwiping = true;
-    // disable pans :)
+    if( this.panCount <= 15) {
+      // avoid executing it in the end of a pan
+      // if it's swipe
+      console.log("pan count", this.panCount);
+      camount = clamp(amount, (this.DOM.bounds.min - this.pos), (this.DOM.bounds.max - this.pos)); // clamp to fit bounds
+      this.pos += camount;
+      console.log("this is a swipe");
+      this.isSwiping = true;
+      // disable pans :)
 
-    TweenMax.to( this.DOM.scenesContainer, 0.75, {
-        x: "+=" + camount,
-        ease: Power3.easeOut,
-        onComplete: function() {
-          self.isSwiping = false;
-        }
-    });
+      TweenMax.to( this.DOM.scenesContainer, 0.75, {
+          x: "+=" + camount,
+          ease: Power3.easeOut,
+          onComplete: function() {
+            self.isSwiping = false;
+          }
+      });
+    }
+
   } else if( type === 'pan' ){
     //camount = mapRange(amount, )
     if( !this.isSwiping ){
@@ -19253,23 +19260,16 @@ XPR_ScrollerHor.prototype.manageSwipes = function(){
   this.hammerManager.on('pan', function(e) {
     if ( ! isDragging ) {
       isDragging = true;
-      //lastPosX = elem.offsetLeft;
-      //astPosY = elem.offsetTop;
+      self.panCount = 0; // reset pan counts
     }
-
-    // we simply need to determine where the x,y of this
-    // object is relative to where it's "last" known position is
-    // NOTE:
-    //    deltaX and deltaY are cumulative
-    // Thus we need to always calculate 'real x and y' relative
-    // to the "lastPosX/Y"
+    self.panCount += 1;
     var posX = e.deltaX + lastPosX;
     var posY = e.deltaY + lastPosY;
-
     self.navigate( 'right', e.deltaX, 'pan' );
     if (e.isFinal) {
       isDragging = false;
-      console.log(" e complete", e.deltaX);
+
+      console.log("pan complete", self.panCount, e.deltaX);
     }
   });
 };
