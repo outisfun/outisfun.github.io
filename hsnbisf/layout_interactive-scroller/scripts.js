@@ -15413,7 +15413,7 @@ ISF_Layout_InteractiveScroller.prototype.setupScrollScenes = function(){
             top: '50%'
         }
     );
-
+    console.log('set me up');
 
     this.introScene = new ScrollMagic.Scene({
         triggerElement: this.DOM.el,
