@@ -175,6 +175,7 @@
   -ms-flex-wrap: wrap;
   flex-wrap: wrap;
   overflow: hidden;
+  pointer-events: none;
 }
 
 span[class*="letter"] {

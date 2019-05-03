@@ -18774,6 +18774,7 @@ if (typeof define === 'function' && define.amd) {
         return Math.hypot(a,b);
     };
 
+
     function radToDeg(radians)
     {
       var pi = Math.PI;
@@ -19197,10 +19198,12 @@ XPR_ScrollerHor.prototype.navigate = function(dir, amount, type){
 
   if( (this.pos >= (this.DOM.bounds.max - ww/10)) && (dir === 'left') ) {
     this.nav.update( true, false, true );
+    console.log("can exit up");
   } else if( (this.pos <= (this.DOM.bounds.min + ww/10)) && (dir === 'right') ) {
     this.nav.update( false, true, false );
-    console.log("exit times");
+    console.log("can exit down");
   } else {
+    console.log("cannot exit");
     this.nav.update( false, false, false );
   }
 
@@ -19306,7 +19309,6 @@ XPR_ScrollerHor.prototype.manageSwipes = function(){
       isDragging = true;
       self.panCount = 0; // reset pan counts
     }
-
     var dir;
     if(e.type === 'panright'){
       dir = 'left';
@@ -19315,12 +19317,22 @@ XPR_ScrollerHor.prototype.manageSwipes = function(){
     }
     self.navigate( dir, e.velocityX * 1000, 'pan' );
     self.panCount += 1;
-
     if (e.isFinal) {
       isDragging = false;
     }
   });
 
+  this.hammerManager.on('panup', function(e) {
+    if( self.nav.canExitDown ){
+      self.exit( 'down' );
+    }
+  });
+
+  this.hammerManager.on('pandown', function(e) {
+    if( self.nav.canExitUp ){
+      self.exit( 'up' );
+    }
+  });
 };
 
 
