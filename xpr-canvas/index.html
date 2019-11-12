@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+    <html class="no-js"><!--<![endif]-->
+    <head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>xpr</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=0">
+    <link href="https://unpkg.com/ionicons@4.2.2/dist/css/ionicons.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <div id = "xpr" class = "xpr">
+
+    <div class = "xpr-canvas">
+
+      <!-- container -->
+      <div class = "xpr-canvas__container" id = 'siouxsie'>
+      </div>
+      <!-- / container -->
+
+      <!-- loader -->
+      <div class = "xpr-canvas__loader">
+        <div class = "xpr-canvas__loader__logo">
+          <h6>XPRCANVAS</h6>
+        </div>
+      </div>
+      <!-- / loader -->
+
+      <!-- pen -->
+      <div class = "xpr-pen">
+        <canvas class = "xpr-pen__canvas" id = 'pen-canvas'>
+        </canvas>
+        <div class = "xpr-pen__svg">
+        </div>
+        <div class = "xpr-pen__color-picker--wrap">
+          <div class = "xpr-pen__color-picker__controls">
+            <button class = "color-picker--current" style = "background-color: rgba(206, 53, 119);">
+            </button>
+            <button class = "color-picker--toggle xpr-icon icon--caret">
+            </button>
+          </div>
+          <div class = "xpr-pen__color-picker"
+              acp-color="rgba(206, 53, 119, 1)"
+              acp-show-rgb="no"
+              acp-show-hsl="no"
+              acp-show-hex="no"
+            >
+          </div>
+        </div>
+      </div>
+
+      <!-- pen trigger -->
+      <div class = "xpr-canvas__pen-trigger">
+        <button class = "xpr-canvas__pen-trigger__button xpr-icon icon--pen">
+        </button>
+      </div>
+      <!-- / pen trigger -->
+
+      <!-- editor tools -->
+      <div class = "xpr-canvas__editor">
+        <div class = "xpr-canvas__editor--inner">
+          <button class = "xpr-canvas__editor__button--garbage xpr-button--icon xpr-canvas__editor__button
+          xpr-icon icon--trash">
+          </button>
+          <div class = "xpr-canvas__editor__tools">
+            <button class = "xpr-canvas__editor__button--order-top xpr-canvas__editor__button">
+              <span class = "xpr-icon icon--top"></span>
+            </button>
+            <button class = "xpr-canvas__editor__button--order-bottom xpr-canvas__editor__button">
+              <span class = "xpr-icon icon--bottom"></span>
+            </button>
+            <button class = "xpr-canvas__editor__button--lasso xpr-button--icon xpr-canvas__editor__button">
+              <span class = "xpr-icon icon--lasso"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- manager -->
+      <div class = "xpr-canvas__manager">
+        <div class = "xpr-canvas__manager--inner">
+          <button class = "xpr-canvas__manager__button--reset xpr-canvas__manager__button">
+            <span class = "xpr-icon icon--reset"></span>
+          </button>
+          <button class = "xpr-canvas__manager__button--download xpr-canvas__manager__button">
+            <span class = "xpr-icon icon--dnld"></span>
+          </button>
+          <button class = "xpr-canvas__manager__button--exit xpr-canvas__manager__button">
+            <span class = "xpr-icon icon--exit"></span>
+          </button>
+        </div>
+      </div>
+      <!-- / manager -->
+
+      <!-- bank -->
+      <div class = "xpr-canvas__bank">
+        <div class = "xpr-bank__asset--wrap">
+          <div class = "xpr-bank__asset asset--drag-and-droppable" data-asset = "0" style = "background-image: url('https://interactive-development.hsnb.io/hsnbisf/assets/bowie1.jpg');"></div>
+        </div>
+        <div class = "xpr-bank__asset--wrap">
+          <div class = "xpr-bank__asset asset--drag-and-droppable" data-asset = "1" style = "background-image: url('https://interactive-development.hsnb.io/hsnbisf/assets/bowie2.jpg');"></div>
+        </div>
+        <div class = "xpr-bank__asset--wrap">
+          <div class = "xpr-bank__asset asset--drag-and-droppable" data-asset = "2" style = "background-image: url('https://interactive-development.hsnb.io/hsnbisf/assets/bowie3.jpg');"></div>
+        </div>
+        <div class = "xpr-bank__asset--wrap">
+          <div class = "xpr-bank__asset asset--drag-and-droppable" data-asset = "3" style = "background-image: url('https://interactive-development.hsnb.io/hsnbisf/assets/bowie4.jpg');"></div>
+        </div>
+        <div class = "xpr-bank__asset--wrap">
+          <div class = "xpr-bank__asset asset--drag-and-droppable" data-asset = "4" style = "background-image: url('https://interactive-development.hsnb.io/hsnbisf/assets/bowie5.jpg');"></div>
+        </div>
+        <div class = "xpr-bank__asset--wrap">
+          <div class = "xpr-bank__asset asset--drag-and-droppable" data-asset = "5" style = "background-image: url('https://interactive-development.hsnb.io/hsnbisf/assets/bowie6.jpg');"></div>
+        </div>
+        <div class = "xpr-bank__asset--wrap">
+          <div class = "xpr-bank__asset asset--drag-and-droppable" data-asset = "6" style = "background-image: url('https://interactive-development.hsnb.io/hsnbisf/assets/bowie7.jpg');"></div>
+        </div>
+        <div class = "xpr-bank__asset--wrap">
+          <div class = "xpr-bank__asset asset--drag-and-droppable" data-asset = "7" style = "background-image: url('https://interactive-development.hsnb.io/hsnbisf/assets/bowie8.jpg');"></div>
+        </div>
+      </div>
+      <!-- / bank -->
+
+      <!-- lasso -->
+      <div class = "xpr-lasso">
+        <div class = "xpr-lasso__canvas">
+          <canvas id = "xpr-canvas-el">
+          </canvas>
+        </div>
+        <div class = "xpr-lasso__asset">
+          <div class = "xpr-lasso__asset__image">
+            <img src = "https://interactive-development.hsnb.io/2019-09-burberry/assets/katoman-3-800.jpg" />
+            <p class = "xpr-lasso__instructions">
+              Use your finger / mouse to outline a cutout.
+            </p>
+          </div>
+          <button class = "xpr-lasso__canvas__exit xpr-icon icon--check">
+          </button>
+          <svg class = "xpr-lasso__asset__svg" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1839" height="1257" viewBox="0,0,1839,1257">
+            <clipPath id = "asset-clip"></clipPath>
+          </svg>
+        </div>
+      </div>
+      <!-- / lasso -->
+
+      <!-- assets -->
+      <div class = "xpr-assets--hidden">
+        <div class = "xpr-asset--hidden">
+        <img src = "https://interactive-development.hsnb.io/hsnbisf/assets/bowie1.jpg" />
+      </div>
+      <div class = "xpr-asset--hidden">
+        <img src = "https://interactive-development.hsnb.io/hsnbisf/assets/bowie2.jpg" />
+      </div>
+      <div class = "xpr-asset--hidden">
+        <img src = "https://interactive-development.hsnb.io/hsnbisf/assets/bowie3.jpg" />
+      </div>
+      <div class = "xpr-asset--hidden">
+        <img src = "https://interactive-development.hsnb.io/hsnbisf/assets/bowie4.jpg" />
+      </div>
+      <div class = "xpr-asset--hidden">
+        <img src = "https://interactive-development.hsnb.io/hsnbisf/assets/bowie5.jpg" />
+      </div>
+      <div class = "xpr-asset--hidden">
+        <img src = "https://interactive-development.hsnb.io/hsnbisf/assets/bowie6.jpg" />
+      </div>
+      <div class = "xpr-asset--hidden">
+        <img src = "https://interactive-development.hsnb.io/hsnbisf/assets/bowie7.jpg" />
+      </div>
+      <div class = "xpr-asset--hidden">
+        <img src = "https://interactive-development.hsnb.io/hsnbisf/assets/bowie8.jpg" />
+      </div>
+      </div>
+      <!-- / assets -->
+    </div>
+
+  </div>
+  <script src="https://unpkg.com/ionicons@4.2.2/dist/ionicons.js"></script>
+  <script src="scripts.js"></script>
+  </body>
+</html>
