@@ -641,20 +641,16 @@ body {
   background-position: 0 0; }
 .xpr-icon.icon--lasso {
   background-position: -45px 0;
-  border-radius: 22.5px;
-  background-color: black; }
+  border-radius: 22.5px; }
 .xpr-icon.icon--reset {
   background-position: -90px -0px;
-  border-radius: 22.5px;
-  background-color: black; }
+  border-radius: 22.5px; }
 .xpr-icon.icon--dnld {
   background-position: -135px -0px;
-  border-radius: 22.5px;
-  background-color: black; }
+  border-radius: 22.5px; }
 .xpr-icon.icon--exit {
   background-position: -180px -0px;
-  border-radius: 22.5px;
-  background-color: black; }
+  border-radius: 22.5px; }
 .xpr-icon.icon--check {
   background-position: -225px 0; }
 .xpr-icon.icon--tutorial {
