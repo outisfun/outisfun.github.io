@@ -22262,14 +22262,14 @@ module.exports = XPR_Map;
 	var ScrollMagic = require( 'scrollmagic' );
 	require( 'scrollmagic/scrollmagic/uncompressed/plugins/animation.gsap' );
 	var gsap = require( 'gsap' );
-    var Snap = require( 'snapsvg' );
-    var Victor = require( 'victor' );
+  var Snap = require( 'snapsvg' );
+  var Victor = require( 'victor' );
 
-    var xprMap;
+  var xprMap;
 
-    var XPR_Map = require('../1904__mapnav/map.js');
+  var XPR_Map = require('../1904__mapnav/map.js');
 
-    xprMap = new XPR_Map(document.querySelector( ".xpr-map" ));
+  xprMap = new XPR_Map(document.querySelector( ".xpr-map" ));
 
 })(window);
 

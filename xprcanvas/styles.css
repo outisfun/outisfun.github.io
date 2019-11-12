@@ -186,9 +186,11 @@ img {
   justify-content: center;
   background-color: black;
   z-index: 50;
+
   opacity: 0;
-  pointer-events: none; }
-  .xpr-lasso__instructions {
+  pointer-events: none;
+
+  &__instructions {
     color: white;
     position: absolute;
     max-width: 240px;
@@ -197,31 +199,42 @@ img {
     left: 50%;
     width: 100%;
     text-align: center;
-    transform: translate3d(-50%, calc(-100% - 25px), 0); }
-  .xpr-lasso__asset {
+    transform: translate3d(-50%, calc(-100% - 25px), 0);
+  }
+
+  &__asset {
     display: flex;
     align-items: center;
     justify-content: center;
     height: 100%;
-    width: 100%; }
-    .xpr-lasso__asset__image {
+    width: 100%;
+
+    &__image {
       display: flex;
       justify-content: center;
-      position: relative; }
-      .xpr-lasso__asset__image img {
+      position: relative;
+      img {
         /*width: 100%;
         float: left;*/
         object-fit: contain;
         max-width: 100%;
-        max-height: 100%; }
-    .xpr-lasso__asset__svg {
+        max-height: 100%;
+      }
+    }
+
+    &__svg {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate3d(-50%, -50%, 0);
+
       opacity: 0;
-      pointer-events: none; }
-  .xpr-lasso__canvas {
+      pointer-events: none;
+      //display: none;
+    }
+  }
+
+  &__canvas {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -230,16 +243,25 @@ img {
     background-color: #a9a9a9;
     z-index: 20;
     pointer-events: all;
-    width: 100%; }
-    .xpr-lasso__canvas #xpr-canvas-el {
+    width: 100%;
+
+    #xpr-canvas-el {
       height: 100%;
-      width: 100%; }
-    .xpr-lasso__canvas__exit {
+      width: 100%;
+    }
+
+    &__exit {
       position: absolute;
       background-color: white;
       bottom: 15px;
+      left: 50%;
+      transform: translate3d(-50%, 0, 0);
+
       z-index: 50;
-      padding: 5px 10px; }
+      padding: 5px 10px;
+    }
+  }
+}
 
 .xpr-canvas__asset__overlay {
   padding: 5px;

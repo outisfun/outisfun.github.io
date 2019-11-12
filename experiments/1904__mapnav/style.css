@@ -116,6 +116,7 @@
   height: 100%;
   display: flex;
   align-items: center;
+
 }
 .xpr-map__loc__el h1 {
   color: transparent;
@@ -126,6 +127,7 @@
   font-size: 18vw;
   line-height: 18vw;
   margin: 0px;
+  //display: none;
 }
 .xpr-map__loc .xpr-map__svg {
   height: 100vh;
