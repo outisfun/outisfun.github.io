@@ -884,4 +884,17 @@ transform: translate3d(0, -50%, 0);*/
       z-index: 50;
       padding: 5px 10px; }
 
+.xpr-canvas__asset {
+  display: inline-block;
+  margin: 0px;
+  touch-action: none;
+  user-select: none;
+  transform-origin: center center;
+  -webkit-transform: translate(0px, 0px);
+  transform: translate(0px, 0px);
+  transition: width 0.1s cubic-bezier(0.47, 0, 0.745, 0.715);
+  transition: opacity 0.1s cubic-bezier(0.47, 0, 0.745, 0.715); }
+  .xpr-canvas__asset.is--dragged {
+    border: 1px solid white; }
+
 /*# sourceMappingURL=styles.css.map */
